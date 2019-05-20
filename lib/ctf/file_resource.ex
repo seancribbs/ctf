@@ -5,7 +5,7 @@ defmodule Ctf.FileResource do
     res_dir = Path.join([:code.priv_dir(:ctf), "static", dir])
 
     resources =
-      for res <- File.ls!(res_dir) do
+      for res <- File.ls!(res_dir), String.ends_with?(res, extension) do
         path = Path.join(res_dir, res)
         Module.put_attribute(__CALLER__.module, :external_resource, path)
         {path, Path.basename(path, extension), Scenic.Cache.Hash.file!(path, :sha)}
