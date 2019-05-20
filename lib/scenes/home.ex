@@ -1,7 +1,7 @@
 defmodule Ctf.Scene.Home do
   use Scenic.Scene
 
-  alias Scenic.Graph
+  alias Scenic.{Graph, ViewPort}
 
   import Scenic.Primitives
   # import Scenic.Components
@@ -38,6 +38,7 @@ defmodule Ctf.Scene.Home do
   def handle_input({:key, {" ", :release, _}}, _context, state) do
     # TODO: Switch scenes
     IO.puts("GAME BEGINS!")
+    ViewPort.set_root(state.viewport, Ctf.Scene.Board)
     {:noreply, state}
   end
 
