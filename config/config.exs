@@ -5,7 +5,7 @@ use Mix.Config
 # Configure the main viewport for the Scenic application
 config :ctf, :viewport, %{
   name: :main_viewport,
-  size: {700, 600},
+  size: {600, 600},
   default_scene: {Ctf.Scene.Board, nil},
   drivers: [
     %{
