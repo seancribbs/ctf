@@ -23,6 +23,7 @@ defmodule Ctf.FileResource do
         for kind <- unquote(resource_kinds) do
           load(kind)
         end
+        :ok
       end
 
       def __manifest__ do
