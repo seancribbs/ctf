@@ -23,6 +23,7 @@ defmodule Ctf.FileResource do
         for kind <- unquote(resource_kinds) do
           load(kind)
         end
+
         :ok
       end
 
@@ -73,11 +74,19 @@ defmodule Ctf.FileResource do
     # Generates accessor functions for each resource type, where the single
     # argument is the filename before the matching pattern, and the return value
     # is the hash for that file.
-    for {name, {file_pattern, _, _}} <- resources, {file, hash} <- grouped_resources[name] do
+    for {name, {file_pattern, _, opts}} <- resources,
+        {file, file_hash} <- grouped_resources[name] do
       [short_name | _] =
         file
         |> Path.basename()
         |> String.split(file_pattern)
+
+      hash =
+        with true <- opts[:extension_hash], <<?., ext_hash::binary>> <- Path.extname(file) do
+          ext_hash
+        else
+          _ -> file_hash
+        end
 
       quote do
         def unquote(name)(unquote(short_name)) do

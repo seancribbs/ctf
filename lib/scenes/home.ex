@@ -31,8 +31,7 @@ defmodule Ctf.Scene.Home do
   def init(_arg, opts) do
     viewport = opts[:viewport]
 
-    push_graph(@graph)
-    {:ok, %{graph: @graph, viewport: viewport}}
+    {:ok, %{graph: @graph, viewport: viewport}, push: @graph}
   end
 
   def handle_input({:key, {" ", :release, _}}, _context, state) do
