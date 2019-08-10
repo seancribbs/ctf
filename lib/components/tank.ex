@@ -5,11 +5,11 @@ defmodule Ctf.Tank do
   alias Scenic.Graph
 
   @height 15 + 83
-  @padding 5
+  @padding 3
   @width 78
 
   @impl true
-  def verify(any) do
+  def verify(any = {color, size}) when is_atom(color) and is_number(size) do
     {:ok, any}
   end
 
@@ -26,8 +26,8 @@ defmodule Ctf.Tank do
   end
 
   def offsets(size) do
-    scale_factor = size / @height
-    {((@height - @width) / 2 + 5) * scale_factor, @padding * scale_factor}
+    scale_factor = size / (@height + 2 * @padding)
+    {((@height - @width) / 2 + @padding) * scale_factor, @padding * scale_factor}
   end
 
   defp base(graph, :red) do

@@ -73,9 +73,13 @@ defmodule Ctf.Scene.Board do
                  end)
 
   @tanks (for color <- ~w(blue)a do
-           fn graph ->
-             {xoff, yoff} = Ctf.Tank.offsets(@square_size)
-             Ctf.Tank.add_to_graph(graph, {color, @square_size}, translate: {@square_size+xoff, @square_size+yoff}, id: color)
+            fn graph ->
+              {xoff, yoff} = Ctf.Tank.offsets(@square_size)
+
+              Ctf.Tank.add_to_graph(graph, {color, @square_size},
+                translate: {@square_size + xoff, @square_size + yoff},
+                id: color
+              )
             end
           end)
 
