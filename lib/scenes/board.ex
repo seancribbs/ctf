@@ -1,6 +1,6 @@
 defmodule Ctf.Scene.Board do
   use Scenic.Scene
-  alias Scenic.{Graph, ViewPort}
+  alias Scenic.Graph
   import Scenic.Primitives
   alias Ctf.Sprites
 
@@ -72,7 +72,14 @@ defmodule Ctf.Scene.Board do
                    end
                  end)
 
-  @objects @dirt_squares ++ @h_grid_lines ++ @v_grid_lines ++ @obstacles
+  @tanks (for color <- ~w(blue)a do
+           fn graph ->
+             {xoff, yoff} = Ctf.Tank.offsets(@square_size)
+             Ctf.Tank.add_to_graph(graph, {color, @square_size}, translate: {@square_size+xoff, @square_size+yoff}, id: color)
+            end
+          end)
+
+  @objects @dirt_squares ++ @h_grid_lines ++ @v_grid_lines ++ @obstacles ++ @tanks
   @graph Enum.reduce(@objects, Graph.build(), fn f, g -> f.(g) end)
 
   def init(_arg, opts) do
@@ -81,13 +88,13 @@ defmodule Ctf.Scene.Board do
     {:ok, %{graph: @graph, viewport: viewport}, push: @graph}
   end
 
-  def handle_input({:key, {" ", :release, _}}, _context, state) do
-    IO.puts("SWITCHING BACK")
-    ViewPort.set_root(state.viewport, Ctf.Scene.Home, nil)
-    {:noreply, state}
-  end
+  # def handle_input({:key, {" ", :release, _}}, _context, state) do
+  #   IO.puts("SWITCHING BACK")
+  #   ViewPort.set_root(state.viewport, Ctf.Scene.Home, nil)
+  #   {:noreply, state}
+  # end
 
-  def handle_input(_, _, state) do
-    {:noreply, state}
-  end
+  # def handle_input(_, _, state) do
+  #   {:noreply, state}
+  # end
 end
