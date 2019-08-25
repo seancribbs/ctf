@@ -2,11 +2,11 @@ defmodule Board do
   # {x => y => [<list of things in that cell>]}
   @enforce_keys [:cells, :players, :flags, :obstacles, :width, :height]
   defstruct cells: nil, players: nil, flags: nil, obstacles: [], width: nil, height: nil
-   
+
   @type t() :: %__MODULE__{
           cells: Map.t,
-          players: [Player.t, Player.t],
-          flags: [Flag.t, Flag.t],
+          players: [Player.t],
+          flags: [Flag.t],
           obstacles: List.t,
           width: Integer.t,
           height: Integer.t
@@ -51,36 +51,34 @@ defmodule Board do
   def is_empty?(%Board{} = board, x, y) do
   end
 
-  def dump_board(%Board{} = board) do
+  def dump(%Board{} = board) do
     IO.puts "\n\n"
 
     Enum.each(0..(board.width-1), fn(x) ->
       row = board.cells[x] || %{}
 
-      Enum.join(
+      IO.puts Enum.join(
         Enum.map(0..(board.height-1), fn(y) ->
           case row[y] do
             nil ->
-              IO.puts [IO.ANSI.blue, "__"]
+              [IO.ANSI.blue, "__"]
             %Player{number: number} ->
-              IO.puts [IO.ANSI.yellow, "P#{number}"]
+              [IO.ANSI.yellow, "P#{number}"]
             %Flag{number: number} ->
-              IO.puts [IO.ANSI.green, "F#{number}"]
+              [IO.ANSI.green, "F#{number}"]
             %Obstacle{} ->
-              IO.puts [IO.ANSI.red, "XX"]
+              [IO.ANSI.red, "XX"]
           end
         end), " "
       )
-
-      IO.puts "\n"
     end)
   end
 
   defp place_players(cells, width, height, players, flags) do
     Enum.reduce(
-      Enum.zip([:upper_left, :lower_right], players, flags),
+      Enum.zip([[:upper_left, :lower_right], players, flags]),
       {cells, []},
-      fn({quadrant, player, flag}, {board, players}) ->
+      fn({quadrant, player, flag}, {board, acc}) ->
         {x, y} = empty_cell(quadrant, board, width, height)
         player = Player.new(
           number: flag.number,
@@ -91,14 +89,14 @@ defmodule Board do
           module: player.module
         )
 
-        {place_blindly(board, x, y, player), [player | players]}
+        {place_blindly(board, x, y, player), [player | acc]}
       end
     )
   end
 
   defp place_flags(cells, width, height) do
     Enum.reduce(
-      Enum.zip([:upper_left, :lower_right], 1..2),
+      Enum.zip([[:upper_left, :lower_right], 1..2]),
       {cells, []},
       fn({quadrant, number}, {board, flags}) ->
         {x, y} = empty_cell(quadrant, board, width, height)
@@ -108,9 +106,10 @@ defmodule Board do
     )
   end
 
+  defp place_obstacles(cells, width, height, count, obstacles \\ [])
   defp place_obstacles(cells, _, _, 0, obstacles), do: {cells, obstacles}
-  defp place_obstacles(cells, width, height, count, obstacles \\ []) do
-    {x, y} = empty_cell(cells, width, height)
+  defp place_obstacles(cells, width, height, count, obstacles) do
+    {x, y} = empty_cell(:all, cells, width, height)
     obstacle = Obstacle.new(x: x, y: y)
 
     place_obstacles(
@@ -129,7 +128,7 @@ defmodule Board do
   end
 
   defp empty_cell(:upper_left, cells, width, height) do
-    empty_cell(:all, cells, (trunc(width / 3), trunc(height / 3))
+    empty_cell(:all, cells, trunc(width / 3), trunc(height / 3))
   end
 
   defp empty_cell(:lower_right, cells, width, height) do
@@ -146,8 +145,8 @@ defmodule Board do
       nil -> {x, y}
       row ->
         case row[y] do
-          nil: {x, y}
-          _ -> empty_cell(cells, width, height)
+          nil -> {x, y}
+          _ -> empty_cell(:all, cells, width, height)
         end
     end
   end

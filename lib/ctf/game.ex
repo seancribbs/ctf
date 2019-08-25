@@ -3,10 +3,10 @@ defmodule Game do
   defstruct board: nil
 
   @type t() :: %__MODULE__{
-          board: Board.t,
+          board: Board.t
         }
 
-  def new(players, board_height // 50, board_width // 50, obstacle_count // 25) do
+  def new(players, board_height \\ 50, board_width \\ 50, obstacle_count \\ 25) do
     %Game{
       board: Board.new(
         height: board_height,
@@ -17,6 +17,6 @@ defmodule Game do
     }
   end
 
-  def play(%Game{} = game) do
-  end
+  #def play(%Game{} = game) do
+  #end
 end
