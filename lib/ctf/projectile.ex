@@ -1,4 +1,4 @@
-defmodule Projectile do
+defmodule Ctf.Projectile do
   @enforce_keys [:x, :y]
   defstruct x: nil, y: nil
 
@@ -8,7 +8,7 @@ defmodule Projectile do
   }
 
   def new(x: x, y: y) do
-    %Projectile{
+    %__MODULE__{
       x: x,
       y: y
     }

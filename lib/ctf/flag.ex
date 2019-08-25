@@ -1,4 +1,4 @@
-defmodule Flag do
+defmodule Ctf.Flag do
   @enforce_keys [:number, :x, :y]
   defstruct number: nil, x: nil, y: nil
 
@@ -9,7 +9,7 @@ defmodule Flag do
   }
 
   def new(number: number, x: x, y: y) do
-    %Flag{
+    %__MODULE__{
       number: number,
       x: x,
       y: y

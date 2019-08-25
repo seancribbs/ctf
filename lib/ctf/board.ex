@@ -1,7 +1,9 @@
-defmodule Board do
+defmodule Ctf.Board do
   # {x => y => [<list of things in that cell>]}
   @enforce_keys [:cells, :players, :flags, :obstacles, :width, :height]
   defstruct cells: nil, players: nil, flags: nil, obstacles: [], width: nil, height: nil
+
+  alias Ctf.{Player, Obstacle, Flag}
 
   @type t() :: %__MODULE__{
           cells: Map.t,
@@ -38,7 +40,7 @@ defmodule Board do
       obstacle_count
     )
 
-    %Board{
+    %__MODULE__{
       cells: cells_with_obstacles,
       players: players,
       flags: flags,
@@ -48,10 +50,10 @@ defmodule Board do
     }
   end
 
-  def is_empty?(%Board{} = board, x, y) do
+  def is_empty?(%__MODULE__{} = board, x, y) do
   end
 
-  def dump(%Board{} = board) do
+  def dump(%__MODULE__{} = board) do
     IO.puts "\n\n"
 
     Enum.each(0..(board.width-1), fn(x) ->
@@ -86,7 +88,11 @@ defmodule Board do
           x: x,
           y: y,
           health_points: player.health_points,
-          module: player.module
+          module: player.module,
+          direction: case quadrant do
+            :upper_left -> :s
+            :lower_right -> :n
+          end
         )
 
         {place_blindly(board, x, y, player), [player | acc]}
@@ -101,7 +107,7 @@ defmodule Board do
       fn({quadrant, number}, {board, flags}) ->
         {x, y} = empty_cell(quadrant, board, width, height)
         flag = Flag.new(number: number, x: x, y: y)
-        {place_blindly(board, x, y, flag), [flag | flags]}
+        {place_blindly(board, x, y, flag), flags ++ [flag]}
       end
     )
   end

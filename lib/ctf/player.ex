@@ -1,6 +1,6 @@
-defmodule Player do
-  @enforce_keys [:number, :flag, :x, :y, :health_points, :module]
-  defstruct number: nil, flag: nil, x: nil, y: nil, health_points: nil, module: nil
+defmodule Ctf.Player do
+  @enforce_keys [:number, :flag, :x, :y, :health_points, :module, :direction]
+  defstruct number: nil, flag: nil, x: nil, y: nil, health_points: nil, module: nil, direction: nil
 
   @type t() :: %__MODULE__{
          number: Integer.t,
@@ -8,7 +8,8 @@ defmodule Player do
          x: Integer.t,
          y: Integer.t,
          health_points: Integer.t,
-         module: Atom.t
+         module: Atom.t,
+         direction: Atom.t
        }
 
   @directions %{
@@ -18,32 +19,33 @@ defmodule Player do
     "E" => [1,  0],
   }
 
-  def new(number: number, flag: flag, x: x, y: y, health_points: health_points, module: module) do
-    %Player{
+  def new(number: number, flag: flag, x: x, y: y, health_points: health_points, module: module, direction: direction) when direction in [:n, :s, :e, :w] do
+    %__MODULE__{
       number: number,
       flag: flag,
       x: x,
       y: y,
       health_points: health_points,
-      module: module
+      module: module,
+      direction: direction
     }
   end
 
-  #def move(%Player{position: [x, y]} = player, direction, units \\ 1) when units > 0 and units <= 3 do
+  #def move(%__MODULE__{position: [x, y]} = player, direction, units \\ 1) when units > 0 and units <= 3 do
   #  direction_transform = @directions[direction]
   #  new_player_position =
   #    Enum.reduce(1..units, fn
-  #  %Player{player | position: [x + direction_transform[0] * units, y + direction_transform[1] * units]}}
+  #  %__MODULE__{player | position: [x + direction_transform[0] * units, y + direction_transform[1] * units]}}
 
 
-  #  {:ok, %Player{player | position: [x + direction_transform[0] * units, y + direction_transform[1] * units]}}
+  #  {:ok, %__MODULE__{player | position: [x + direction_transform[0] * units, y + direction_transform[1] * units]}}
   #end
 
-  def decrement_health(%Player{health_points: health_points} = player) do
+  def decrement_health(%__MODULE__{health_points: health_points} = player) do
     if health_points == 0 do
       {:error, player, "no health points to decrement"}
     else
-      {:ok, %Player{player | health_points: health_points - 1}}
+      {:ok, %__MODULE__{player | health_points: health_points - 1}}
     end
   end
 end

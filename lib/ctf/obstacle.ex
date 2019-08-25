@@ -1,4 +1,4 @@
-defmodule Obstacle do
+defmodule Ctf.Obstacle do
   @enforce_keys [:x, :y]
   defstruct x: nil, y: nil
 
@@ -8,7 +8,7 @@ defmodule Obstacle do
   }
 
   def new(x: x, y: y) do
-    %Obstacle{
+    %__MODULE__{
       x: x,
       y: y
     }
