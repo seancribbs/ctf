@@ -12,7 +12,9 @@ defmodule Ctf.Board do
           obstacles: List.t,
           width: Integer.t,
           height: Integer.t
-        }
+  }
+
+  @direction_notation [n: "\u02C4", s: "\u02C5", e: "\u02C3", w: "\u02C2"]
 
   def new(height: height,
           width: width,
@@ -64,8 +66,8 @@ defmodule Ctf.Board do
           case row[y] do
             nil ->
               [IO.ANSI.blue, "__"]
-            %Player{number: number} ->
-              [IO.ANSI.yellow, "P#{number}"]
+            %Player{number: number, direction: direction} ->
+              [IO.ANSI.yellow, "#{number}#{@direction_notation[direction]}"]
             %Flag{number: number} ->
               [IO.ANSI.green, "F#{number}"]
             %Obstacle{} ->
