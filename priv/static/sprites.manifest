@@ -15,6 +15,7 @@ priv/static/sprites/tankGreen_outline.png ZSnccCyJGmg227wkXxMfOypxMlU
 priv/static/sprites/barrelBeige.png MIhDOiWqJePlCLIjqReJdzP6DQg
 priv/static/sprites/bulletBlue_outline.png SvXUTL66BD-HyYY_T8n8i4T9JLI
 priv/static/sprites/barrelGreen_up.png 3uhdC7mpTdpuKy2-hlklgLrRwBw
+priv/static/sprites/flagGreen.png iWdyZrbbygxzqfM9wigT7CBqkMc
 priv/static/sprites/smokeGrey3.png rY52t-FVln7Xhvk5dIljgWqeh0E
 priv/static/sprites/bulletBeigeSilver.png tNzP7A1PPblHrdVD3AY1x0eG0SE
 priv/static/sprites/smokeGrey2.png 2_nxwLCNMpkSAE-ApaQ8ncnb-sU
@@ -28,6 +29,7 @@ priv/static/sprites/barrelBlue_outline.png C_2QjtRC78uc96d_aeoYplfaIKI
 priv/static/sprites/bulletSilverSilver.png aXDS0GBtDs1bcJD4q9h5I8vFn_I
 priv/static/sprites/smokeGrey5.png EDcpdVQs4M57rgTYXBtHraYpbNU
 priv/static/sprites/smokeGrey4.png hwl1PeLM1EFP5mTHxdwsUZEMmgk
+priv/static/sprites/flagBlue.png 6pUy3mMe7e-AZGgJkaDYN7fOL08
 priv/static/sprites/bulletSilverSilver_outline.png uc6czxZudGxkxHBD90iwUXcfjQc
 priv/static/sprites/bulletSilver.png -V4arAwsWjOYemYYhC8gM7hdJLw
 priv/static/sprites/bulletBeige_outline.png H5FodcllqyanjrHF9qVEZTOmQOA
@@ -78,8 +80,10 @@ priv/static/sprites/license.txt HZQLQuJVdK7nKXlu1PQ_wYvXKQ8
 priv/static/sprites/barrelGreen_side.png lXe2RUUKz-vhWzbBJG1Lq1mKvgo
 priv/static/sprites/barrelGrey_side.png zzJ01furTtrqOhrknvQHpdHzDEI
 priv/static/sprites/tankBlack.png TFwfI6b-4Ix14kjS4VwsVNrShto
+priv/static/sprites/flagYellow.png aiPp3EnhU-Aaq-MD7itrZi_k6kg
 priv/static/sprites/sand.png 5eW7W3JK8sGutjh2M0MRM_8c8tI
 priv/static/sprites/barrelBlack_outline.png WGufIz3HHJqjKq_mYMlqiHXnfKM
+priv/static/sprites/flagRed.png sAaPXkXyE-YbMRW5hagxALZ1G4I
 priv/static/sprites/tankBeige_outline.png hixNwMD29s2m96P7rBz83EeOgI0
 priv/static/sprites/barrelBlue.png cLWUZXB5NQiqaxTVN46Id_CaSdM
 priv/static/sprites/bulletYellowSilver_outline.png aSlxY_v_xt59eDKY6SJM3Uae2uQ
