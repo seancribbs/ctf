@@ -97,7 +97,7 @@ defmodule Ctf.Board do
           end
         )
 
-        {place_blindly(board, x, y, player), [player | acc]}
+        {place_blindly(board, x, y, player), acc ++ [player]}
       end
     )
   end
