@@ -41,6 +41,7 @@ defmodule Ctf.Tank do
   defp base(graph, sprite_name) when is_binary(sprite_name) do
     rrect(graph, {83, 78, 5},
       fill: {:image, sprite(sprite_name)},
+      pin: {83 / 2.0, (78 + 15) / 2.0},
       translate: {0, 15}
     )
   end
@@ -54,6 +55,9 @@ defmodule Ctf.Tank do
   end
 
   defp turret(graph, sprite_name) when is_binary(sprite_name) do
-    rrect(graph, {24, 58, 5}, fill: {:image, sprite(sprite_name)}, translate: {29, 0})
+    rrect(graph, {24, 58, 5},
+      fill: {:image, sprite(sprite_name)},
+      pin: {12, 58},
+      translate: {29, 0})
   end
 end
