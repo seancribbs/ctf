@@ -58,6 +58,7 @@ defmodule Ctf.Tank do
     rrect(graph, {24, 58, 5},
       fill: {:image, sprite(sprite_name)},
       pin: {12, 58},
-      translate: {29, 0})
+      translate: {29, 0}
+    )
   end
 end

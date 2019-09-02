@@ -6,41 +6,45 @@ defmodule Ctf.Board do
   alias Ctf.{Player, Obstacle, Flag}
 
   @type t() :: %__MODULE__{
-          cells: Map.t,
-          players: [Player.t],
-          flags: [Flag.t],
-          obstacles: List.t,
-          width: Integer.t,
-          height: Integer.t
-  }
+          cells: Map.t(),
+          players: [Player.t()],
+          flags: [Flag.t()],
+          obstacles: List.t(),
+          width: Integer.t(),
+          height: Integer.t()
+        }
 
   @direction_notation [n: "\u02C4", s: "\u02C5", e: "\u02C3", w: "\u02C2"]
 
-  def new(height: height,
-          width: width,
-          players: [%{}, %{}] = players_spec,
-          obstacle_count: obstacle_count) do
+  def new(
+        height: height,
+        width: width,
+        players: [%{}, %{}] = players_spec,
+        obstacle_count: obstacle_count
+      ) do
+    {cells_with_flags, flags} =
+      place_flags(
+        %{},
+        width,
+        height
+      )
 
-    {cells_with_flags, flags} = place_flags(
-      %{},
-      width,
-      height
-    )
+    {cells_with_players, players} =
+      place_players(
+        cells_with_flags,
+        width,
+        height,
+        players_spec,
+        flags
+      )
 
-    {cells_with_players, players} = place_players(
-      cells_with_flags,
-      width,
-      height,
-      players_spec,
-      flags
-    )
-
-    {cells_with_obstacles, obstacles} = place_obstacles(
-      cells_with_players,
-      width,
-      height,
-      obstacle_count
-    )
+    {cells_with_obstacles, obstacles} =
+      place_obstacles(
+        cells_with_players,
+        width,
+        height,
+        obstacle_count
+      )
 
     %__MODULE__{
       cells: cells_with_obstacles,
@@ -56,24 +60,30 @@ defmodule Ctf.Board do
   end
 
   def dump(%__MODULE__{} = board) do
-    IO.puts "\n\n"
+    IO.puts("\n\n")
 
-    Enum.each(0..(board.width-1), fn(x) ->
+    Enum.each(0..(board.width - 1), fn x ->
       row = board.cells[x] || %{}
 
-      IO.puts Enum.join(
-        Enum.map(0..(board.height-1), fn(y) ->
-          case row[y] do
-            nil ->
-              [IO.ANSI.blue, "__"]
-            %Player{number: number, direction: direction} ->
-              [IO.ANSI.yellow, "#{number}#{@direction_notation[direction]}"]
-            %Flag{number: number} ->
-              [IO.ANSI.green, "F#{number}"]
-            %Obstacle{} ->
-              [IO.ANSI.red, "XX"]
-          end
-        end), " "
+      IO.puts(
+        Enum.join(
+          Enum.map(0..(board.height - 1), fn y ->
+            case row[y] do
+              nil ->
+                [IO.ANSI.blue(), "__"]
+
+              %Player{number: number, direction: direction} ->
+                [IO.ANSI.yellow(), "#{number}#{@direction_notation[direction]}"]
+
+              %Flag{number: number} ->
+                [IO.ANSI.green(), "F#{number}"]
+
+              %Obstacle{} ->
+                [IO.ANSI.red(), "XX"]
+            end
+          end),
+          " "
+        )
       )
     end)
   end
@@ -82,20 +92,23 @@ defmodule Ctf.Board do
     Enum.reduce(
       Enum.zip([[:upper_left, :lower_right], players, flags]),
       {cells, []},
-      fn({quadrant, player, flag}, {board, acc}) ->
+      fn {quadrant, player, flag}, {board, acc} ->
         {x, y} = empty_cell(quadrant, board, width, height)
-        player = Player.new(
-          number: flag.number,
-          flag: flag,
-          x: x,
-          y: y,
-          health_points: player.health_points,
-          module: player.module,
-          direction: case quadrant do
-            :upper_left -> :s
-            :lower_right -> :n
-          end
-        )
+
+        player =
+          Player.new(
+            number: flag.number,
+            flag: flag,
+            x: x,
+            y: y,
+            health_points: player.health_points,
+            module: player.module,
+            direction:
+              case quadrant do
+                :upper_left -> :s
+                :lower_right -> :n
+              end
+          )
 
         {place_blindly(board, x, y, player), acc ++ [player]}
       end
@@ -106,7 +119,7 @@ defmodule Ctf.Board do
     Enum.reduce(
       Enum.zip([[:upper_left, :lower_right], 1..2]),
       {cells, []},
-      fn({quadrant, number}, {board, flags}) ->
+      fn {quadrant, number}, {board, flags} ->
         {x, y} = empty_cell(quadrant, board, width, height)
         flag = Flag.new(number: number, x: x, y: y)
         {place_blindly(board, x, y, flag), flags ++ [flag]}
@@ -116,6 +129,7 @@ defmodule Ctf.Board do
 
   defp place_obstacles(cells, width, height, count, obstacles \\ [])
   defp place_obstacles(cells, _, _, 0, obstacles), do: {cells, obstacles}
+
   defp place_obstacles(cells, width, height, count, obstacles) do
     {x, y} = empty_cell(:all, cells, width, height)
     obstacle = Obstacle.new(x: x, y: y)
@@ -149,8 +163,11 @@ defmodule Ctf.Board do
   defp empty_cell(:all, cells, width, height) do
     x = trunc(:rand.uniform() * width)
     y = trunc(:rand.uniform() * height)
+
     case cells[x] do
-      nil -> {x, y}
+      nil ->
+        {x, y}
+
       row ->
         case row[y] do
           nil -> {x, y}
