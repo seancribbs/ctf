@@ -72,12 +72,13 @@ defmodule Ctf.Scene.Board do
                    end
                  end)
 
-  @tanks (for color <- ~w(blue)a do
+  @tanks (for {color, idx} <- Enum.with_index(~w(blue red)a, 1) do
             fn graph ->
               {xoff, yoff} = Ctf.Tank.offsets(@square_size)
 
               Ctf.Tank.add_to_graph(graph, {color, @square_size},
-                translate: {@square_size + xoff, @square_size + yoff},
+                translate: {(@square_size * idx) + xoff, (@square_size * idx) + yoff},
+                rotate: :math.pi() * 0.5 * Enum.random(0..3),
                 id: color
               )
             end
