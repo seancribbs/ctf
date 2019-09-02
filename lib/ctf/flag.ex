@@ -3,10 +3,10 @@ defmodule Ctf.Flag do
   defstruct number: nil, x: nil, y: nil
 
   @type t() :: %__MODULE__{
-    number: Integer.t,
-    x: Integer.t,
-    y: Integer.t
-  }
+          number: Integer.t(),
+          x: Integer.t(),
+          y: Integer.t()
+        }
 
   def new(number: number, x: x, y: y) do
     %__MODULE__{

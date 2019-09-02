@@ -3,9 +3,9 @@ defmodule Ctf.Projectile do
   defstruct x: nil, y: nil
 
   @type t() :: %__MODULE__{
-    x: Integer.t,
-    y: Integer.t
-  }
+          x: Integer.t(),
+          y: Integer.t()
+        }
 
   def new(x: x, y: y) do
     %__MODULE__{

@@ -93,20 +93,23 @@ defmodule Ctf.Board do
     Enum.reduce(
       Enum.zip([[:upper_left, :lower_right], players, flags]),
       {cells, []},
-      fn({quadrant, player, flag}, {board, acc}) ->
+      fn {quadrant, player, flag}, {board, acc} ->
         {x, y} = empty_cell(quadrant, board, width, height)
-        player = Player.new(
-          number: flag.number,
-          flag: flag,
-          x: x,
-          y: y,
-          health_points: player.health_points,
-          module: player.module,
-          direction: case quadrant do
-            :upper_left -> :s
-            :lower_right -> :n
-          end
-        )
+
+        player =
+          Player.new(
+            number: flag.number,
+            flag: flag,
+            x: x,
+            y: y,
+            health_points: player.health_points,
+            module: player.module,
+            direction:
+              case quadrant do
+                :upper_left -> :s
+                :lower_right -> :n
+              end
+          )
 
         {place_blindly(board, x, y, player), acc ++ [player]}
       end
@@ -117,7 +120,7 @@ defmodule Ctf.Board do
     Enum.reduce(
       Enum.zip([[:upper_left, :lower_right], 1..2]),
       {cells, []},
-      fn({quadrant, number}, {board, flags}) ->
+      fn {quadrant, number}, {board, flags} ->
         {x, y} = empty_cell(quadrant, board, width, height)
         flag = Flag.new(number: number, x: x, y: y)
         {place_blindly(board, x, y, flag), flags ++ [flag]}
@@ -127,6 +130,7 @@ defmodule Ctf.Board do
 
   defp place_obstacles(cells, width, height, count, obstacles \\ [])
   defp place_obstacles(cells, _, _, 0, obstacles), do: {cells, obstacles}
+
   defp place_obstacles(cells, width, height, count, obstacles) do
     {x, y} = empty_cell(:all, cells, width, height)
     obstacle = Obstacle.new(x: x, y: y)
@@ -160,8 +164,11 @@ defmodule Ctf.Board do
   defp empty_cell(:all, cells, width, height) do
     x = trunc(:rand.uniform() * width)
     y = trunc(:rand.uniform() * height)
+
     case cells[x] do
-      nil -> {x, y}
+      nil ->
+        {x, y}
+
       row ->
         case row[y] do
           nil -> {x, y}

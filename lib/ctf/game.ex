@@ -3,19 +3,20 @@ defmodule Ctf.Game do
   defstruct board: nil
 
   @type t() :: %__MODULE__{
-          board: Board.t
-  }
+          board: Board.t()
+        }
 
   alias Ctf.{Board, Player, Flag, Obstacle}
 
   def new(players, board_height \\ 20, board_width \\ 20, obstacle_count \\ 25) do
     %__MODULE__{
-      board: Board.new(
-        height: board_height,
-        width: board_width,
-        players: players,
-        obstacle_count: obstacle_count
-      )
+      board:
+        Board.new(
+          height: board_height,
+          width: board_width,
+          players: players,
+          obstacle_count: obstacle_count
+        )
     }
   end
 

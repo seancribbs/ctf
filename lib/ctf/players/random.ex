@@ -17,6 +17,7 @@ defmodule Ctf.Players.Random do
   defp accumulate_turns(acc, 0) do
     Enum.reverse(acc)
   end
+
   defp accumulate_turns(acc, remaining) do
     move = Enum.at(@moves, trunc(:rand.uniform() * length(@moves)))
     # need to return at least 1 to be valid
