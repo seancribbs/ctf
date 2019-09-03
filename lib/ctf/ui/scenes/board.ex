@@ -16,36 +16,17 @@ defmodule Ctf.Scene.Board do
                    end
                  end)
 
-  @obstacle_scale @square_size / 107
-  @obstacle_size 98 * @obstacle_scale
-  @obstacle_pad (@square_size - @obstacle_size) / 2
-  @obstacle_x_offset (98 - @obstacle_size) / 2 - @obstacle_pad
-  @obstacle_y_offset (107 - @square_size) / 2
-
-  @stats %{
-    count: @grid_count,
-    size: @square_size,
-    obstacle_scale: @obstacle_scale,
-    obstacle_width: @obstacle_size,
-    obstacle_offset: @obstacle_pad
-  }
+  @flags (for {color, idx} <- Enum.with_index(~w(red blue)a, 1) do
+            &Ctf.Components.Flag.add_to_graph(&1, {color, @square_size, 0, 0}, id: {:flag, idx})
+          end)
 
   @obstacles (for o <- 1..10 do
                 fn graph ->
                   x = :rand.uniform(@grid_count - 1)
                   y = :rand.uniform(@grid_count - 1)
 
-                  translate = {
-                    x * @square_size - @obstacle_x_offset,
-                    y * @square_size - @obstacle_y_offset
-                  }
-
-                  rectangle(graph, {98, 107},
-                    fill: {:image, Sprites.sprite("treeLarge")},
-                    id: {:obstacle, o},
-                    translate: translate,
-                    scale: @obstacle_scale,
-                    rotate: :math.pi() * 2 * :rand.uniform()
+                  Ctf.Components.Obstacle.add_to_graph(graph, @square_size, x, y,
+                    id: {:obstacle, o}
                   )
                 end
               end)
@@ -72,34 +53,91 @@ defmodule Ctf.Scene.Board do
                    end
                  end)
 
-  @tanks (for {color, idx} <- Enum.with_index(~w(blue red)a, 1) do
+  @tanks (for {color, idx} <- Enum.with_index(~w(red blue)a, 1) do
             fn graph ->
               {xoff, yoff} = Ctf.Tank.offsets(@square_size)
 
               Ctf.Tank.add_to_graph(graph, {color, @square_size},
                 translate: {@square_size * idx + xoff, @square_size * idx + yoff},
                 rotate: :math.pi() * 0.5 * Enum.random(0..3),
-                id: color
+                id: {:player, idx}
               )
             end
           end)
 
-  @objects @dirt_squares ++ @h_grid_lines ++ @v_grid_lines ++ @obstacles ++ @tanks
+  @objects @dirt_squares ++ @h_grid_lines ++ @v_grid_lines ++ @obstacles ++ @tanks ++ @flags
   @graph Enum.reduce(@objects, Graph.build(), fn f, g -> f.(g) end)
+
+  alias Ctf.{Board, Player, Flag}
+  alias Ctf.Players.Random
 
   def init(_arg, opts) do
     viewport = opts[:viewport]
-    IO.inspect(@stats)
-    {:ok, %{graph: @graph, viewport: viewport}, push: @graph}
+    # IO.inspect(@stats)
+
+    # Create a dummy board for prototyping
+    f1 = %Flag{number: 1, x: 0, y: 0}
+    f2 = %Flag{number: 2, x: 0, y: 0}
+
+    p1 =
+      Player.new(number: 1, flag: f1, x: 0, y: 0, health_points: 5, module: Random, direction: :e)
+
+    p2 =
+      Player.new(number: 2, flag: f2, x: 0, y: 0, health_points: 5, module: Random, direction: :w)
+
+    board =
+      Board.new(height: @grid_count, width: @grid_count, players: [p1, p2], obstacle_count: 10)
+
+    graph = draw_board(@graph, board)
+
+    Board.dump(board)
+
+    {:ok, %{graph: graph, viewport: viewport, board: board}, push: graph}
   end
 
-  # def handle_input({:key, {" ", :release, _}}, _context, state) do
-  #   IO.puts("SWITCHING BACK")
-  #   ViewPort.set_root(state.viewport, Ctf.Scene.Home, nil)
-  #   {:noreply, state}
-  # end
+  defp draw_board(graph, board) do
+    # Move players first
+    directions = %{
+      :n => 0,
+      :w => 0.5,
+      :s => 1,
+      :e => 1.5
+    }
 
-  # def handle_input(_, _, state) do
-  #   {:noreply, state}
-  # end
+    # Position the players
+    graph =
+      Enum.reduce(board.players, graph, fn player, graph ->
+        {xoff, yoff} = Ctf.Tank.offsets(@square_size)
+
+        Graph.modify(
+          graph,
+          {:player, player.number},
+          &update_opts(&1,
+            translate: {player.y * @square_size + xoff, player.x * @square_size + yoff},
+            rotate: directions[player.direction] * :math.pi()
+          )
+        )
+      end)
+
+    graph =
+      board.obstacles
+      |> Enum.with_index(1)
+      |> Enum.reduce(graph, fn {obstacle, i}, graph ->
+        Graph.modify(
+          graph,
+          {:obstacle, i},
+          &Ctf.Components.Obstacle.adjust_position(&1, @square_size, obstacle.y, obstacle.x)
+        )
+      end)
+
+    board.flags
+    |> Enum.with_index(1)
+    |> Enum.reduce(graph, fn {flag, i}, graph ->
+      Graph.modify(
+        graph,
+        {:flag, i},
+        &Ctf.Components.Flag.adjust_position(&1, @square_size, flag.y, flag.x)
+      )
+    end)
+  end
 end

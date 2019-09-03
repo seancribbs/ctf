@@ -86,6 +86,8 @@ defmodule Ctf.Board do
         )
       )
     end)
+
+    IO.puts([IO.ANSI.reset(), "\n\n"])
   end
 
   defp place_players(cells, width, height, players, flags) do

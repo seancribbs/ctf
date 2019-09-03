@@ -17,7 +17,7 @@ defmodule Ctf.Player do
 
   @type t() :: %__MODULE__{
           number: Integer.t(),
-          flag: Flat.t(),
+          flag: Flag.t(),
           x: Integer.t(),
           y: Integer.t(),
           health_points: Integer.t(),
