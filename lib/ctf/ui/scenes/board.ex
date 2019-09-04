@@ -54,15 +54,9 @@ defmodule Ctf.Scene.Board do
                  end)
 
   @tanks (for {color, idx} <- Enum.with_index(~w(red blue)a, 1) do
-            fn graph ->
-              {xoff, yoff} = Ctf.Tank.offsets(@square_size)
-
-              Ctf.Tank.add_to_graph(graph, {color, @square_size},
-                translate: {@square_size * idx + xoff, @square_size * idx + yoff},
-                rotate: :math.pi() * 0.5 * Enum.random(0..3),
-                id: {:player, idx}
-              )
-            end
+            &Ctf.Components.Tank.add_to_graph(&1, color, @square_size, :n, 0, 0,
+              id: {:player, idx}
+            )
           end)
 
   @objects @dirt_squares ++ @h_grid_lines ++ @v_grid_lines ++ @obstacles ++ @tanks ++ @flags
@@ -92,29 +86,37 @@ defmodule Ctf.Scene.Board do
 
     Board.dump(board)
 
-    {:ok, %{graph: graph, viewport: viewport, board: board}, push: graph}
+#    tref = :timer.send_interval(17, :spin)
+
+    {:ok, %{graph: graph, viewport: viewport, board: board, rotation: 0}, push: graph}
   end
+
+  # def handle_info(:spin, %{graph: graph, rotation: r0} = state) do
+  #   r =
+  #     if r0 >= 2 * :math.pi() do
+  #       0
+  #     else
+  #       r0 + 0.1
+  #     end
+
+  #   graph = Graph.modify(graph, {:player, 1}, &update_opts(&1, rotate: r))
+
+  #   {:noreply, %{state | graph: graph, rotation: r}, push: graph}
+  # end
 
   defp draw_board(graph, board) do
     # Move players first
-    directions = %{
-      :n => 0,
-      :w => 0.5,
-      :s => 1,
-      :e => 1.5
-    }
-
-    # Position the players
     graph =
       Enum.reduce(board.players, graph, fn player, graph ->
-        {xoff, yoff} = Ctf.Tank.offsets(@square_size)
-
         Graph.modify(
           graph,
           {:player, player.number},
-          &update_opts(&1,
-            translate: {player.y * @square_size + xoff, player.x * @square_size + yoff},
-            rotate: directions[player.direction] * :math.pi()
+          &Ctf.Components.Tank.adjust_position(
+            &1,
+            @square_size,
+            player.direction,
+            player.y,
+            player.x
           )
         )
       end)

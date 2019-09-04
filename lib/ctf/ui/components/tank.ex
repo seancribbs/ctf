@@ -1,33 +1,43 @@
-defmodule Ctf.Tank do
-  use Scenic.Component, has_children: false
+defmodule Ctf.Components.Tank do
   import Ctf.Sprites
   import Scenic.Primitives
-  alias Scenic.Graph
 
   @height 15 + 83
   @padding 3
   @width 78
+  @directions %{n: 0, w: 0.5, s: 1, e: 1.5}
 
-  @impl true
-  def verify(any = {color, size}) when is_atom(color) and is_number(size) do
-    {:ok, any}
+  def add_to_graph(graph, color, size, direction, x, y, opts) do
+    defaults = transforms(size, direction, x, y)
+
+    group(
+      graph,
+      fn group ->
+        group
+        |> base(color)
+        |> turret(color)
+      end,
+      Keyword.merge(defaults, opts)
+    )
   end
 
-  @impl true
-  def init({color, size}, _opts) do
-    scale_factor = size / (@height + 2 * @padding)
-
-    graph =
-      Graph.build(scale: scale_factor)
-      |> base(color)
-      |> turret(color)
-
-    {:ok, color, push: graph}
+  def adjust_position(tank, size, direction, x, y) do
+    update_opts(tank, transforms(size, direction, x, y))
   end
 
-  def offsets(size) do
-    scale_factor = size / (@height + 2 * @padding)
-    {((@height - @width) / 2 + @padding) * scale_factor, @padding * scale_factor}
+  defp transforms(size, direction, x, y) do
+    scale_factor = size / @height
+    tank_size = @width * scale_factor
+    tank_pad = (size - tank_size) / 2
+    xoff = (@width - tank_size) / 2 - tank_pad
+    yoff = (@height - size) / 2
+
+    [
+      pin: {@width / 2.0, @height / 2.0},
+      scale: scale_factor,
+      translate: {x * size - xoff, y * size - yoff},
+      rotate: @directions[direction] * :math.pi()
+    ]
   end
 
   defp base(graph, :red) do
@@ -39,9 +49,9 @@ defmodule Ctf.Tank do
   end
 
   defp base(graph, sprite_name) when is_binary(sprite_name) do
-    rrect(graph, {83, 78, 5},
+    rect(graph, {83, 78},
       fill: {:image, sprite(sprite_name)},
-      pin: {83 / 2.0, (78 + 15) / 2.0},
+#      pin: {83 / 2.0, (78 + 15) / 2.0},
       translate: {0, 15}
     )
   end
@@ -55,9 +65,9 @@ defmodule Ctf.Tank do
   end
 
   defp turret(graph, sprite_name) when is_binary(sprite_name) do
-    rrect(graph, {24, 58, 5},
+    rect(graph, {24, 58},
       fill: {:image, sprite(sprite_name)},
-      pin: {12, 58},
+#      pin: {12, 58},
       translate: {29, 0}
     )
   end

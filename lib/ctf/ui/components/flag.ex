@@ -10,7 +10,7 @@ defmodule Ctf.Components.Flag do
         fill: {:image, Sprites.sprite(sprite_name(color))}
       )
 
-    rectangle(graph, {70, 70}, Keyword.merge(defaults, opts))
+    rectangle(graph, {@size, @size}, Keyword.merge(defaults, opts))
   end
 
   def adjust_position(rect, square_size, x, y) do
@@ -18,9 +18,11 @@ defmodule Ctf.Components.Flag do
   end
 
   defp transforms(square_size, x, y) do
+    scale = square_size / @size
+    offset = (@size - square_size) / 2
     [
-      translate: {square_size * x, square_size * y},
-      scale: square_size / @size
+      translate: {square_size * x - offset, square_size * y - offset},
+      scale: scale
     ]
   end
 
