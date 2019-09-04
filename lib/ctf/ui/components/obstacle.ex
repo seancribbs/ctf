@@ -2,6 +2,9 @@ defmodule Ctf.Components.Obstacle do
   import Scenic.Primitives, only: [rectangle: 3, update_opts: 2]
   alias Ctf.Sprites
 
+  @width 98
+  @height 107
+
   def add_to_graph(graph, square_size, x, y, opts) do
     defaults =
       Keyword.merge(transforms(square_size, x, y),
@@ -9,7 +12,7 @@ defmodule Ctf.Components.Obstacle do
         rotate: :math.pi() * 2 * :rand.uniform()
       )
 
-    rectangle(graph, {98, 107}, Keyword.merge(defaults, opts))
+    rectangle(graph, {@width, @height}, Keyword.merge(defaults, opts))
   end
 
   def adjust_position(rect, square_size, x, y) do
@@ -17,11 +20,11 @@ defmodule Ctf.Components.Obstacle do
   end
 
   defp transforms(square_size, x, y) do
-    obstacle_scale = square_size / 107
-    obstacle_size = 98 * obstacle_scale
+    obstacle_scale = square_size / @height
+    obstacle_size = @width * obstacle_scale
     obstacle_pad = (square_size - obstacle_size) / 2
-    obstacle_x_offset = (98 - obstacle_size) / 2 - obstacle_pad
-    obstacle_y_offset = (107 - square_size) / 2
+    obstacle_x_offset = (@width - obstacle_size) / 2 - obstacle_pad
+    obstacle_y_offset = (@height - square_size) / 2
 
     translate = {
       x * square_size - obstacle_x_offset,
