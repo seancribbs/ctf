@@ -20,6 +20,7 @@ defmodule Ctf.Components.Flag do
   defp transforms(square_size, x, y) do
     scale = square_size / @size
     offset = (@size - square_size) / 2
+
     [
       translate: {square_size * x - offset, square_size * y - offset},
       scale: scale
