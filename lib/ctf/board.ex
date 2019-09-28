@@ -164,18 +164,11 @@ defmodule Ctf.Board do
   end
 
   defp empty_cell(:all, cells, width, height) do
-    x = trunc(:rand.uniform() * width)
-    y = trunc(:rand.uniform() * height)
-
-    case cells[x] do
-      nil ->
-        {x, y}
-
-      row ->
-        case row[y] do
-          nil -> {x, y}
-          _ -> empty_cell(:all, cells, width, height)
-        end
+    fn ->
+      {trunc(:rand.uniform() * width), trunc(:rand.uniform() * height)}
     end
+    |> Stream.repeatedly()
+    |> Stream.filter(fn {x, y} -> x < width && y < height end)
+    |> Enum.find(&is_nil(get_in(cells, Tuple.to_list(&1))))
   end
 end
