@@ -4,7 +4,7 @@ defmodule Ctf.Scene.Board do
   import Scenic.Primitives
   alias Ctf.Sprites
 
-  @grid_count 18
+  @grid_count 20
   @square_size 600 / @grid_count
 
   @dirt_squares (for x <- 0..5, y <- 0..5 do
@@ -86,9 +86,15 @@ defmodule Ctf.Scene.Board do
 
     Board.dump(board)
 
-#    tref = :timer.send_interval(17, :spin)
+    :timer.send_interval(1000, :move)
 
     {:ok, %{graph: graph, viewport: viewport, board: board, rotation: 0}, push: graph}
+  end
+
+  def handle_info(:move, %{graph: graph, board: board} = state) do
+    board = move_player(board, 1)
+    graph = draw_board(graph, board)
+    {:noreply, %{state | graph: graph, board: board}, push: graph}
   end
 
   # def handle_info(:spin, %{graph: graph, rotation: r0} = state) do
@@ -115,8 +121,8 @@ defmodule Ctf.Scene.Board do
             &1,
             @square_size,
             player.direction,
-            player.y,
-            player.x
+            player.x,
+            player.y
           )
         )
       end)
@@ -128,7 +134,7 @@ defmodule Ctf.Scene.Board do
         Graph.modify(
           graph,
           {:obstacle, i},
-          &Ctf.Components.Obstacle.adjust_position(&1, @square_size, obstacle.y, obstacle.x)
+          &Ctf.Components.Obstacle.adjust_position(&1, @square_size, obstacle.x, obstacle.y)
         )
       end)
 
@@ -138,8 +144,25 @@ defmodule Ctf.Scene.Board do
       Graph.modify(
         graph,
         {:flag, i},
-        &Ctf.Components.Flag.adjust_position(&1, @square_size, flag.y, flag.x)
+        &Ctf.Components.Flag.adjust_position(&1, @square_size, flag.x, flag.y)
       )
     end)
+  end
+
+  defp move_player(%{cells: cells, players: players} = board, number) do
+    {[player], other_players} = Enum.split_with(players, &(&1.number == number))
+    cells = set_cell(cells, player.x, player.y, nil)
+    player = Player.move(player)
+
+    %{
+      board
+      | cells: set_cell(cells, player.x, player.y, player),
+        players: [player | other_players]
+    }
+  end
+
+  defp set_cell(cells, x, y, item) do
+    column = cells[x] || %{}
+    Map.put(cells, x, Map.put(column, y, item))
   end
 end

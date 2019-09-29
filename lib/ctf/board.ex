@@ -65,34 +65,29 @@ defmodule Ctf.Board do
   end
 
   def dump(%__MODULE__{} = board) do
-    IO.puts("\n\n")
+    [
+      "\n\n",
+      for y <- 0..(board.height - 1) do
+        for x <- 0..(board.width - 1) do
+          case get_in(board.cells, [x, y]) do
+            nil ->
+              [IO.ANSI.blue(), "__"]
 
-    Enum.each(0..(board.width - 1), fn x ->
-      row = board.cells[x] || %{}
+            %Player{number: number, direction: direction} ->
+              [IO.ANSI.yellow(), "#{number}#{@direction_notation[direction]}"]
 
-      IO.puts(
-        Enum.join(
-          Enum.map(0..(board.height - 1), fn y ->
-            case row[y] do
-              nil ->
-                [IO.ANSI.blue(), "__"]
+            %Flag{number: number} ->
+              [IO.ANSI.green(), "F#{number}"]
 
-              %Player{number: number, direction: direction} ->
-                [IO.ANSI.yellow(), "#{number}#{@direction_notation[direction]}"]
-
-              %Flag{number: number} ->
-                [IO.ANSI.green(), "F#{number}"]
-
-              %Obstacle{} ->
-                [IO.ANSI.red(), "XX"]
-            end
-          end),
-          " "
-        )
-      )
-    end)
-
-    IO.puts([IO.ANSI.reset(), "\n\n"])
+            %Obstacle{} ->
+              [IO.ANSI.red(), "XX"]
+          end ++ [IO.ANSI.reset(), " "]
+        end ++ ["\n"]
+      end,
+      IO.ANSI.reset(),
+      "\n\n"
+    ]
+    |> IO.puts()
   end
 
   defp place_players(cells, width, height, players, flags) do
