@@ -1,4 +1,4 @@
-defmodule Ctf.Fonts do
+defmodule Ctf.UI.Fonts do
   use Ctf.FileResource,
     manifest: "priv/static/fonts.manifest",
     resources: [
