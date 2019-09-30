@@ -11,10 +11,12 @@ defmodule Ctf.UI.Scenes.Game do
 
   def init(_, opts) do
     viewport = opts[:viewport]
+    board = dummy_board()
 
     graph =
       @graph
-      |> C.Board.add_to_graph(dummy_board(), id: :board)
+      |> C.Board.add_to_graph(board, id: :board)
+      |> C.Scores.add_to_graph(board, width: 601, height: 50, translate: {0, 600})
 
     {:ok, %{graph: graph, viewport: viewport}, push: graph}
   end
