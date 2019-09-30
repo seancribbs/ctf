@@ -1,6 +1,6 @@
-defmodule Ctf.Components.Obstacle do
+defmodule Ctf.UI.Objects.Obstacle do
   import Scenic.Primitives, only: [rectangle: 3, update_opts: 2]
-  alias Ctf.Sprites
+  alias Ctf.UI.Sprites
 
   @width 98
   @height 107

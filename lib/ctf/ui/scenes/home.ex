@@ -1,4 +1,4 @@
-defmodule Ctf.Scene.Home do
+defmodule Ctf.UI.Scenes.Home do
   use Scenic.Scene
 
   alias Scenic.{Graph, ViewPort}
@@ -20,7 +20,7 @@ defmodule Ctf.Scene.Home do
 
   @prompt ">> PRESS SPACE TO BEGIN BATTLE <<"
 
-  @graph Graph.build(font: Ctf.Fonts.font("retro-gaming"), font_size: 24)
+  @graph Graph.build(font: Ctf.UI.Fonts.font("retro-gaming"), font_size: 24)
          |> text(@title, translate: {350, 60}, text_align: :center, fill: :yellow)
          |> text(@note, translate: {175, 150})
          |> text(@prompt, translate: {350, 550}, text_align: :center, fill: :cornflower_blue)
@@ -37,7 +37,7 @@ defmodule Ctf.Scene.Home do
   def handle_input({:key, {" ", :release, _}}, _context, state) do
     # TODO: Switch scenes
     IO.puts("GAME BEGINS!")
-    ViewPort.set_root(state.viewport, Ctf.Scene.Board)
+    ViewPort.set_root(state.viewport, Ctf.UI.Scenes.Game)
     {:noreply, state}
   end
 

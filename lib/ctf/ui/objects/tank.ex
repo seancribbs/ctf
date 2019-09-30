@@ -1,5 +1,5 @@
-defmodule Ctf.Components.Tank do
-  import Ctf.Sprites
+defmodule Ctf.UI.Objects.Tank do
+  import Ctf.UI.Sprites
   import Scenic.Primitives
 
   @height 15 + 83

@@ -1,6 +1,6 @@
-defmodule Ctf.Components.Flag do
+defmodule Ctf.UI.Objects.Flag do
   import Scenic.Primitives, only: [rectangle: 3, update_opts: 2]
-  alias Ctf.Sprites
+  alias Ctf.UI.Sprites
 
   @size 70
 
