@@ -52,180 +52,261 @@ defmodule Ctf.Game do
 
 
     Enum.zip([p1_move, p2_move], game.board.players)
-    |> create_frame(game, :ok, [game])
+    |> create_frame(:ok, [game])
     |> validate_board()
   end
 
-  defp create_frame(:ok, [], _, new_game), do: {:ok, new_game}
-  defp create_frame(:error, [], original_game, _), do: {:error, original_game}
-  defp create_frame({:win, player}, [], _, new_game), do: {:win, player, new_game}
-  defp create_frame(:draw, [], _, new_game), do: {:draw, new_game}
-  defp create_frame(:ok, [{{:fire, count}, %Player{direction: direction, x: x, y: y} = player} | rest], original_game, status, new_games) do
-    [newest_game | rest_games] = new_games
+  defp create_frame([], status, frames) do
+    # reverse and return all but final frame
+    [initial_game | rest] = Enum.reverse(frames)
+    {:ok, rest}
+  end
+  defp create_frame(status, [{{:fire, count}, %Player{direction: direction, x: x, y: y} = player} | rest_steps], frames) do
+    [newest_frame | rest_frames] = frames
 
-    case detect_collsion(player, newest_game, {x, y}, count) do
-      {:player, %Player{x: hit_x, y: hit_y, health_points: health_points, number: number} = hit_player} ->
+    case detect_collision(player, newest_frame, {x, y}, count) do
+      {:player, %Player{health_points: health_points, number: number} = hit_player} ->
         new_hit_player = %Player{hit_player | health_points: health_points - 1}
-        updated_game =
-          %Game{newest_game |
-            board: %Board{board |
+        updated_frame =
+          %Game{newest_frame |
+            board: %Board{newest_frame.board|
               players: List.replace_at(
-                newest_game.board.players,
+                newest_frame.board.players,
                 number - 1,
                 new_hit_player
               ),
-              collisions: [{:fire, {hit_x, hit_y}} | (newest_game.board.collisions || [])],
-              cells: update_in(newest_game.board.cells, [hit_x, hit_y], new_hit_player)
+              events: [{:fire, {x, y}, hit_player} | (newest_frame.board.events || [])]
             }
           }
 
-        updated_games =
+        updated_frames =
           cond do
             # no other fires in this frame, as we order fires first
-            is_nil(newest_game.board.collisions) ->
-              [updated_game | new_games]
+            newest_frame.board.events == [] ->
+              [updated_frame | frames]
             # other fires in this frame, so just update the same fire frame
             true ->
-              [updated_game | rest_games]
+              [updated_frame | rest_frames]
           end
 
         case {new_hit_player.health_points, status} do
-          {0, :ok} -> create_frame(rest, original_game, {:win, player}, updated_games)
-          {0, {:win, _}} -> create_frame(rest, original_game, :draw, updated_games)
-          _ -> create_frame(rest, original_game, status, updated_games)
+          {0, :ok} -> create_frame({:win, player}, rest_steps, updated_frames)
+          {0, {:win, _}} -> create_frame(:draw, rest_steps, :draw, updated_frames)
+          _ -> create_frame(status, rest_steps, updated_frames)
         end
-      _ ->
-        # no new frames
-        create_frame(rest, original_game, status, new_games)
+      # Flags, Obstacles, Edges
+      {_, barrier} ->
+        updated_frame =
+          %Game{newest_frame |
+            board: %Board{newest_frame.board |
+              events: [{:fire, {x, y}, barrier} | (newest_frame.board.events || [])]
+            }
+          }
+
+        updated_frames =
+          cond do
+            # no other fires in this frame, as we order fires first
+            newest_frame.board.events == [] ->
+              [updated_frame | new_frames]
+            # other fires in this frame, so just update the same fire frame
+            true ->
+              [updated_frame | rest_frames]
+          end
+
+        create_frame(status, rest_steps, updated_frames)
     end
   end
-  defp create_frame([{{direction, 1}, %Player{number: number, x: x, y: y} = player} | rest], original_game, status, new_games) when direction in [:clockwise, :counterclockwise] do
-    [newest_game | rest_games] = new_games
+  defp create_frame(status, [{{direction, 1}, %Player{number: number, x: x, y: y} = player} | rest_steps], frames) when direction in [:clockwise, :counterclockwise] do
+    [newest_frame | rest_frames] = frames 
     new_rotated_player = Player.rotate(player, direction)
 
-    updated_game =
-      %Game{newest_game |
-        board: %Board{board |
+    updated_frame =
+      %Game{newest_frame |
+        board: %Board{newest_frame.board|
           players: List.replace_at(
-            newest_game.board.players,
+            newest_frame.board.players,
             number - 1,
             new_rotated_player
           ),
-          cells: update_in(game.board.cells, [x, y], new_rotated_player)
         }
       }
 
-    updated_games =
-      if !is_nil(newest_game.board.collisions) && elem(Enum.at(newest_game.board.collisions, 0), 0) == :fire do
-        [updated_game | new_games]
+    updated_frames =
+      if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+        [updated_frame | frames]
       else
-        [updated_game | rest_games]
+        [updated_frame | rest_frames]
       end
 
-    create_frame(rest, original_game, status, updated_games)
+    create_frame(status, rest_steps, updated_frames)
   end
-  defp create_frame([{{:move, 1}, %Player{number: number, x: x, y: y, health_points: health_points} = player} | rest], original_game, status, new_games) do 
-    [newest_game | _] = new_games
+  defp create_frame(status, [{{:move, 1}, %Player{number: number, x: x, y: y, health_points: health_points} = player} | rest_steps], frames) do 
+    [newest_frame | rest_frames] = frames
 
-    case detect_collsion(player, newest_game, {x, y}, 1) do
+    case detect_collision(player, newest_frame, {x, y}, 1) do
       {:player, %Player{x: hit_x, y: hit_y, health_points: health_points, number: number} = hit_player} ->
-        reduce both players
-        need to make sure this only happens once
-      obstacle when obstacle in [{:edge, _}, {:obstacle, _}] ->
-        {type, _} = obstacle
-        {obstacle_x, obstacle_y} = case obstacle do
-          {:edge, {edge_x, edge_y}} -> {edge_x, edge_y}
-          {:obstacle, %Obstacle{x: obstacle_x, y: obstacle_y}} -> {obstacle_x, obstacle_y}
-        end
+        if !is_nil(newest_frame.board.events) do
+          case newest_frame.board.events do
+            [{:collision, %Person{}}] ->
+              # already collided in last frame, so no updates necessary
+              create_frame(status, rest_steps, frames)
+            [{:move, %{x: ^hit_x, y: ^hit_y}}] ->
+              # previous player moved to this square, so rollback to original frame, and subtract health
+              [original_frame | _] = Enum.reverse(frames)
 
+              [new_player1, new_player2] = new_players = Enum.map(original_frame.board.players, fn board_player ->
+                %Player{board_player | health_points: health_points - 1}
+              end)
+
+              updated_frame =
+                %Game{original_frame |
+                  board: %Board{original_frame.board |
+                    players: new_players,
+                    events: [
+                      {:collision, %{x: hit_x, y: hit_y}},
+                      {:collision, new_player1},
+                      {:collision, new_player2}
+                    ]
+                  }
+                }
+
+              case new_players do
+                [%Player{health_points: 0}, %Player{health_points: 0}] ->
+                  create_frame(:draw, rest_steps, [updated_frame])
+                [%Player{health_points: 0}, other_player] ->
+                  create_frame({:win, other_player}, rest_steps, [updated_frame])
+                [%Player{other_player, %Player{health_points: 0}] ->
+                  create_frame({:win, other_player}, rest_steps, [updated_frame])
+                _ ->
+                  create_frame(status, rest_steps, [updated_frame])
+              end
+            [{:fire, _, _}] ->
+              # hit a player, but previous frame was a fire event, so create new frame
+              no_move_and_reduce_health(newest_frame, frames, status, rest_steps, hit_player, player)
+            _ ->
+              # hit a player, but no conflicting events
+              no_move_and_reduce_health(newest_frame, rest_frames, status, rest_steps, hit_player, player)
+          end
+        else
+          # hit a player, but no events
+          no_move_and_reduce_health(newest_frame, rest_frames, status, rest_steps, hit_player, player)
+        end
+      {type, _} = barrier when type in [:edge, :obstacle] ->
         new_player = %Player{player | health_points: health_points - 1}
         updated_game =
           %Game{newest_game |
-            board: %Board{board |
+            board: %Board{newest_game.board |
               players: List.replace_at(
                 newest_game.board.players,
                 number - 1,
                 new_player
               ),
-              collisions: [{type, {obstacle_x, obstacle_y}} | (newest_game.board.collisions || [])],
-              cells: update_in(newest_game.board.cells, [hit_x, hit_y], new_player)
+              events: [{:collision, barrier} | (newest_game.board.events || [])]
             }
           }
 
         updated_games =
-          if !is_nil(newest_game.board.collisions) && elem(Enum.at(newest_game.board.collisions, 0), 0) == :fire do
+          if !is_nil(newest_game.board.events) && elem(Enum.at(newest_game.board.events, 0), 0) == :fire do
             [updated_game | new_games]
           else
             [updated_game | rest_games]
           end
 
-        other_player = Enum.filter(newest_game.board.players, fn prospect -> prospect != new_player end)
-
         case {new_player.health_points, status} do
-          {0, :ok} -> create_frame(rest, original_game, {:win, prospect}, updated_games)
-          {0, {:win, _}} -> create_frame(rest, original_game, :draw, updated_games)
-          _ -> create_frame(rest, original_game, status, updated_games)
+          {0, :ok} ->
+            other_player = Enum.filter(newest_game.board.players, fn prospect -> prospect != new_player end)
+            create_frame({:win, other_player}, rest_steps, updated_games)
+          {0, {:win, _}} ->
+            create_frame(:draw, rest_steps, updated_games)
+          _ ->
+            create_frame(status, rest_steps, updated_games)
         end
-      {:flag  %Flag{x: flag_x, y: flag_y, number: flag_number}} ->
+      {:flag  %Flag{x: flag_x, y: flag_y, number: flag_number}} when flag_number != player.number ->
         new_player = %Player{player | x: flag_x, y: flag_y}
         updated_game =
           %Game{newest_game |
-            board: %Board{board |
+            board: %Board{newest_game.board |
               players: List.replace_at(
                 newest_game.board.players,
                 number - 1,
                 new_player
               ),
-              collisions: [{type, {obstacle_x, obstacle_y}} | (newest_game.board.collisions || [])],
-              cells: update_in(newest_game.board.cells, [hit_x, hit_y], new_player)
-            }
-          }
-
-      _ -> nil
-    else
-           if not other player's flag, no collision
-
-      case get_in(game.board.cells, [new_cell_x, new_cell_y]) do
-        %Player{} = p -> {:player, p}
-        %Obstacle{} = o -> {:obstacle, o}
-        %Flag{} = f -> {:flag, f}
-        nil -> detect_collsion(player, game, {new_cell_x, new_cell_y}, count - 1)
-
-        new_hit_player = %Player{hit_player | health_points: health_points - 1}
-        updated_game =
-          %Game{newest_game |
-            board: %Board{board |
-              players: List.replace_at(
-                newest_game.board.players,
-                number - 1,
-                new_hit_player
-              ),
-              collisions: [{:fire, {hit_x, hit_y}} | (newest_game.board.collisions || [])],
-              cells: update_in(newest_game.board.cells, [hit_x, hit_y], new_hit_player)
+              events: [{:move, %{x: flag_x, y: flag_y}} | (newest_game.board.events || [])]
             }
           }
 
         updated_games =
-          cond do
-            # no other fires in this frame, as we order fires first
-            is_nil(newest_game.board.collisions) ->
-              [updated_game | new_games]
-            # other fires in this frame, so just update the same fire frame
-            true ->
-              [updated_game | rest_games]
+          if !is_nil(newest_game.board.events) && elem(Enum.at(newest_game.board.events, 0), 0) == :fire do
+            [updated_game | new_games]
+          else
+            [updated_game | rest_games]
           end
 
-        case {new_hit_player.health_points, status} do
-          {0, :ok} -> create_frame(rest, original_game, {:win, player}, updated_games)
-          {0, {:win, _}} -> create_frame(rest, original_game, :draw, updated_games)
-          _ -> create_frame(rest, original_game, status, updated_games)
+        # if not other's player's flag, no collision/win
+        case status do
+          :ok -> create_frame(rest, original_game, {:win, new_player}, updated_games)
+          {:win, _} -> create_frame(rest, original_game, :draw, updated_games)
         end
-      _ ->
-        # no new frames
-        create_frame(rest, original_game, status, new_games)
+      {:miss, %{x: new_x, y: new_y}} ->
+        # no collision, just advance player
+        new_player = %Player{player | x: new_x, y: new_y}
+        updated_game =
+          %Game{newest_game |
+            board: %Board{newest_game.board |
+              players: List.replace_at(
+                newest_game.board.players,
+                number - 1,
+                new_player
+              ),
+              events: [{:move, %{x: new_x, y: new_y}} | (newest_game.board.events || [])]
+            }
+          }
 
+        updated_games =
+          if !is_nil(newest_game.board.events) && elem(Enum.at(newest_game.board.events, 0), 0) == :fire do
+            [updated_game | new_games]
+          else
+            [updated_game | rest_games]
+          end
+
+        create_frame(rest, original_game, status, updated_games)
+    end
   end
 
+  defp move_and_reduce_health(newest_frame, rest_frames, status, rest_steps, hit_player, player) do
+    case status do
+      {:win, player} ->
+        create_frame(status, rest_steps, rest_frames)
+      :draw ->
+        create_frame(status, rest_steps, rest_frames)
+      :ok ->
+        # reduce both players
+        new_players = Enum.map(newest_frame.board.players, fn board_player ->
+          %Player{board_player | health_points: health_points - 1}
+        end)
+  
+        updated_frame =
+          %Game{newest_frame |
+            board: %Board{newest_frame.board |
+              players: new_players,
+              events: [{:collision, hit_player}, {:collision, player}] ++ (newest_frame.board.events || [])
+            }
+          }
+  
+        updated_frames = [updated_frame | rest_frames]
+  
+        case new_players do
+          [%Player{health_points: 0}, %Player{health_points: 0}] ->
+            create_frame(:draw, rest, updated_frames)
+          [%Player{health_points: 0}, other_player] ->
+            create_frame({:win, other_player}, rest_steps, updated_frames)
+          [%Player{other_player, %Player{health_points: 0}] ->
+            create_frame({:win, other_player}, rest_steps, updated_frames)
+          _ ->
+            create_frame(status, rest_steps, updated_frames)
+        end
+    end
+  end
 
   defp get_newest_game(original_game, new_games) do
     cond do
@@ -234,27 +315,27 @@ defmodule Ctf.Game do
     end
   end
 
-  defp detect_collsion(_, _, _, 0), do: nil
-  defp detect_collsion(player, game, {x, y}, count) do
+  defp detect_collision(_, _, {x, y}, 0), do: {:miss, %{x: x, y: y}} 
+  defp detect_collision(player, game, {x, y}, count) do
     {displace_x, displace_y} = get_displacement(player)
-    new_cell_x = displace_x * count + x 
-    new_cell_y = displace_y * count + y
+    new_cell_x = displace_x + x 
+    new_cell_y = displace_y + y
 
     cond do
       new_cell_x >= game.board.width ->
-        {:edge, {game.board.width, new_cell_y}}
+        {:edge, %{x: game.board.width - 1, y: new_cell_y}}
       new_cell_y >= game.board.height ->
-        {:edge, {new_cell_x, game.board.height}}
+        {:edge, %{x: new_cell_x, y: game.board.height - 1}}
       new_cell_x < 0 ->
-        {:edge, {-1, new_cell_y}}
+        {:edge, %{x: 0, y: new_cell_y}}
       new_cell_y < 0 ->
-        {:edge, {new_cell_x, -1}}
+        {:edge, %{x: new_cell_x, y: 0}}
       true ->
         case get_in(game.board.cells, [new_cell_x, new_cell_y]) do
           %Player{} = p -> {:player, p}
           %Obstacle{} = o -> {:obstacle, o}
           %Flag{} = f -> {:flag, f}
-          nil -> detect_collsion(player, game, {new_cell_x, new_cell_y}, count - 1)
+          nil -> detect_collision(player, game, {new_cell_x, new_cell_y}, count - 1)
         end
     end
   end
