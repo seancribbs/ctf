@@ -6,7 +6,7 @@ defmodule Ctf.Game do
           board: Board.t
   }
 
-  alias Ctf.{Board, Player}
+  alias Ctf.{Board, Player, Flag, Obstacle}
 
   def new(players, board_height \\ 20, board_width \\ 20, obstacle_count \\ 25) do
     %__MODULE__{
@@ -40,35 +40,36 @@ defmodule Ctf.Game do
 
   defp advance_steps([], game, new_boards), do: {:ok, game, new_boards}
   defp advance_steps([{p1_move, p2_move} | rest], game, new_boards) do
+    require IEx
+    IEx.pry
 
 
-
-    have to perform fires first in same lockstep
-    have to perform moves in order to prevent timing problems
-    -> ^, has to be performed in opposite order in same lockstep
-    clear collisions
-    not only need to detect collision on move, but also record if someone else landed in the space in the
-      same frame as the one being collided in
+    # have to perform fires first in same lockstep
+    # have to perform moves in order to prevent timing problems
+    # -> ^, has to be performed in opposite order in same lockstep
+    # clear collisions
+    # not only need to detect collision on move, but also record if someone else landed in the space in the
+    #   same frame as the one being collided in
 
 
     Enum.zip([p1_move, p2_move], game.board.players)
-    |> create_frame(:ok, [game])
-    |> validate_board()
+    #|> create_frame(:ok, [game])
+    #|> validate_board()
   end
 
   defp create_frame([], status, frames) do
     # reverse and return all but final frame
-    [initial_game | rest] = Enum.reverse(frames)
-    {:ok, rest}
+    [_initial_game | rest_frames] = Enum.reverse(frames)
+    {status, rest_frames}
   end
-  defp create_frame(status, [{{:fire, count}, %Player{direction: direction, x: x, y: y} = player} | rest_steps], frames) do
+  defp create_frame(status, [{{:fire, count}, %Player{x: x, y: y} = player} | rest_steps], frames) do
     [newest_frame | rest_frames] = frames
 
     case detect_collision(player, newest_frame, {x, y}, count) do
       {:player, %Player{health_points: health_points, number: number} = hit_player} ->
         new_hit_player = %Player{hit_player | health_points: health_points - 1}
         updated_frame =
-          %Game{newest_frame |
+          %__MODULE__{newest_frame |
             board: %Board{newest_frame.board|
               players: List.replace_at(
                 newest_frame.board.players,
@@ -91,13 +92,13 @@ defmodule Ctf.Game do
 
         case {new_hit_player.health_points, status} do
           {0, :ok} -> create_frame({:win, player}, rest_steps, updated_frames)
-          {0, {:win, _}} -> create_frame(:draw, rest_steps, :draw, updated_frames)
+          {0, {:win, _}} -> create_frame(:draw, rest_steps, updated_frames)
           _ -> create_frame(status, rest_steps, updated_frames)
         end
       # Flags, Obstacles, Edges
       {_, barrier} ->
         updated_frame =
-          %Game{newest_frame |
+          %__MODULE__{newest_frame |
             board: %Board{newest_frame.board |
               events: [{:fire, {x, y}, barrier} | (newest_frame.board.events || [])]
             }
@@ -107,7 +108,7 @@ defmodule Ctf.Game do
           cond do
             # no other fires in this frame, as we order fires first
             newest_frame.board.events == [] ->
-              [updated_frame | new_frames]
+              [updated_frame | frames]
             # other fires in this frame, so just update the same fire frame
             true ->
               [updated_frame | rest_frames]
@@ -116,12 +117,12 @@ defmodule Ctf.Game do
         create_frame(status, rest_steps, updated_frames)
     end
   end
-  defp create_frame(status, [{{direction, 1}, %Player{number: number, x: x, y: y} = player} | rest_steps], frames) when direction in [:clockwise, :counterclockwise] do
+  defp create_frame(status, [{{direction, 1}, %Player{number: number} = player} | rest_steps], frames) when direction in [:clockwise, :counterclockwise] do
     [newest_frame | rest_frames] = frames 
     new_rotated_player = Player.rotate(player, direction)
 
     updated_frame =
-      %Game{newest_frame |
+      %__MODULE__{newest_frame |
         board: %Board{newest_frame.board|
           players: List.replace_at(
             newest_frame.board.players,
@@ -144,10 +145,10 @@ defmodule Ctf.Game do
     [newest_frame | rest_frames] = frames
 
     case detect_collision(player, newest_frame, {x, y}, 1) do
-      {:player, %Player{x: hit_x, y: hit_y, health_points: health_points, number: number} = hit_player} ->
+      {:player, %Player{x: hit_x, y: hit_y, health_points: health_points} = hit_player} ->
         if !is_nil(newest_frame.board.events) do
           case newest_frame.board.events do
-            [{:collision, %Person{}}] ->
+            [{:collision, %Player{}}] ->
               # already collided in last frame, so no updates necessary
               create_frame(status, rest_steps, frames)
             [{:move, %{x: ^hit_x, y: ^hit_y}}] ->
@@ -159,7 +160,7 @@ defmodule Ctf.Game do
               end)
 
               updated_frame =
-                %Game{original_frame |
+                %__MODULE__{original_frame |
                   board: %Board{original_frame.board |
                     players: new_players,
                     events: [
@@ -175,7 +176,7 @@ defmodule Ctf.Game do
                   create_frame(:draw, rest_steps, [updated_frame])
                 [%Player{health_points: 0}, other_player] ->
                   create_frame({:win, other_player}, rest_steps, [updated_frame])
-                [%Player{other_player, %Player{health_points: 0}] ->
+                [other_player, %Player{health_points: 0}] ->
                   create_frame({:win, other_player}, rest_steps, [updated_frame])
                 _ ->
                   create_frame(status, rest_steps, [updated_frame])
@@ -193,100 +194,97 @@ defmodule Ctf.Game do
         end
       {type, _} = barrier when type in [:edge, :obstacle] ->
         new_player = %Player{player | health_points: health_points - 1}
-        updated_game =
-          %Game{newest_game |
-            board: %Board{newest_game.board |
+        updated_frame =
+          %__MODULE__{newest_frame |
+            board: %Board{newest_frame.board |
               players: List.replace_at(
-                newest_game.board.players,
+                newest_frame.board.players,
                 number - 1,
                 new_player
               ),
-              events: [{:collision, barrier} | (newest_game.board.events || [])]
+              events: [{:collision, barrier} | (newest_frame.board.events || [])]
             }
           }
 
-        updated_games =
-          if !is_nil(newest_game.board.events) && elem(Enum.at(newest_game.board.events, 0), 0) == :fire do
-            [updated_game | new_games]
+        updated_frames =
+          if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+            [updated_frame | frames]
           else
-            [updated_game | rest_games]
+            [updated_frame | rest_frames]
           end
 
         case {new_player.health_points, status} do
           {0, :ok} ->
-            other_player = Enum.filter(newest_game.board.players, fn prospect -> prospect != new_player end)
-            create_frame({:win, other_player}, rest_steps, updated_games)
+            other_player = Enum.filter(newest_frame.board.players, fn prospect -> prospect != new_player end)
+            create_frame({:win, other_player}, rest_steps, updated_frames)
           {0, {:win, _}} ->
-            create_frame(:draw, rest_steps, updated_games)
+            create_frame(:draw, rest_steps, updated_frames)
           _ ->
-            create_frame(status, rest_steps, updated_games)
+            create_frame(status, rest_steps, updated_frames)
         end
-      {:flag  %Flag{x: flag_x, y: flag_y, number: flag_number}} when flag_number != player.number ->
+      {:flag, %Flag{x: flag_x, y: flag_y, number: flag_number}} when flag_number != number ->
         new_player = %Player{player | x: flag_x, y: flag_y}
-        updated_game =
-          %Game{newest_game |
-            board: %Board{newest_game.board |
+        updated_frame =
+          %__MODULE__{newest_frame |
+            board: %Board{newest_frame.board |
               players: List.replace_at(
-                newest_game.board.players,
+                newest_frame.board.players,
                 number - 1,
                 new_player
               ),
-              events: [{:move, %{x: flag_x, y: flag_y}} | (newest_game.board.events || [])]
+              events: [{:move, %{x: flag_x, y: flag_y}} | (newest_frame.board.events || [])]
             }
           }
 
-        updated_games =
-          if !is_nil(newest_game.board.events) && elem(Enum.at(newest_game.board.events, 0), 0) == :fire do
-            [updated_game | new_games]
+        updated_frames =
+          if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+            [updated_frame | frames]
           else
-            [updated_game | rest_games]
+            [updated_frame | rest_frames]
           end
 
         # if not other's player's flag, no collision/win
         case status do
-          :ok -> create_frame(rest, original_game, {:win, new_player}, updated_games)
-          {:win, _} -> create_frame(rest, original_game, :draw, updated_games)
+          :ok -> create_frame({:win, new_player}, rest_steps, updated_frames)
+          {:win, _} -> create_frame(:draw, rest_steps, updated_frames)
         end
       {:miss, %{x: new_x, y: new_y}} ->
         # no collision, just advance player
         new_player = %Player{player | x: new_x, y: new_y}
-        updated_game =
-          %Game{newest_game |
-            board: %Board{newest_game.board |
+        updated_frame =
+          %__MODULE__{newest_frame |
+            board: %Board{newest_frame.board |
               players: List.replace_at(
-                newest_game.board.players,
+                newest_frame.board.players,
                 number - 1,
                 new_player
               ),
-              events: [{:move, %{x: new_x, y: new_y}} | (newest_game.board.events || [])]
+              events: [{:move, %{x: new_x, y: new_y}} | (newest_frame.board.events || [])]
             }
           }
 
-        updated_games =
-          if !is_nil(newest_game.board.events) && elem(Enum.at(newest_game.board.events, 0), 0) == :fire do
-            [updated_game | new_games]
+        updated_frames =
+          if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+            [updated_frame | frames]
           else
-            [updated_game | rest_games]
+            [updated_frame | rest_frames]
           end
 
-        create_frame(rest, original_game, status, updated_games)
+        create_frame(status, rest_steps, updated_frames)
     end
   end
 
-  defp move_and_reduce_health(newest_frame, rest_frames, status, rest_steps, hit_player, player) do
+  defp no_move_and_reduce_health(newest_frame, rest_frames, status, rest_steps, hit_player, player) do
     case status do
-      {:win, player} ->
-        create_frame(status, rest_steps, rest_frames)
-      :draw ->
-        create_frame(status, rest_steps, rest_frames)
       :ok ->
+        # previous frame had no win or draw calculated
         # reduce both players
-        new_players = Enum.map(newest_frame.board.players, fn board_player ->
+        new_players = Enum.map(newest_frame.board.players, fn %Player{health_points: health_points} = board_player ->
           %Player{board_player | health_points: health_points - 1}
         end)
   
         updated_frame =
-          %Game{newest_frame |
+          %__MODULE__{newest_frame |
             board: %Board{newest_frame.board |
               players: new_players,
               events: [{:collision, hit_player}, {:collision, player}] ++ (newest_frame.board.events || [])
@@ -297,27 +295,23 @@ defmodule Ctf.Game do
   
         case new_players do
           [%Player{health_points: 0}, %Player{health_points: 0}] ->
-            create_frame(:draw, rest, updated_frames)
+            create_frame(:draw, rest_steps, updated_frames)
           [%Player{health_points: 0}, other_player] ->
             create_frame({:win, other_player}, rest_steps, updated_frames)
-          [%Player{other_player, %Player{health_points: 0}] ->
+          [other_player, %Player{health_points: 0}] ->
             create_frame({:win, other_player}, rest_steps, updated_frames)
           _ ->
             create_frame(status, rest_steps, updated_frames)
         end
-    end
-  end
-
-  defp get_newest_game(original_game, new_games) do
-    cond do
-      [] == new_games -> original_game
-      [newest_game | _] = new_games -> newest_game 
+      other_status ->
+        # pass through a previously calculated win or a draw
+        create_frame(other_status, rest_steps, rest_frames)
     end
   end
 
   defp detect_collision(_, _, {x, y}, 0), do: {:miss, %{x: x, y: y}} 
   defp detect_collision(player, game, {x, y}, count) do
-    {displace_x, displace_y} = get_displacement(player)
+    {displace_x, displace_y} = Player.get_displacement(player)
     new_cell_x = displace_x + x 
     new_cell_y = displace_y + y
 
@@ -361,14 +355,14 @@ defmodule Ctf.Game do
   defp first([], acc, _), do: Enum.reverse(acc)
   defp first(_, acc, 0), do: Enum.reverse(acc)
 
-  defp first([{:fire, count} | rest], acc, remaining) do
+  defp first([{:fire, count} | rest_steps], acc, remaining) do
     # slurp all the fires into one immediate firing turn
-    first(rest, [{:fire, min(remaining, count)} | acc], max(0, remaining - count))
+    first(rest_steps, [{:fire, min(remaining, count)} | acc], max(0, remaining - count))
   end
-  defp first([{_, 1} = move | rest], acc, remaining) do
-    first(rest, [move | acc], remaining - 1)
+  defp first([{_, 1} = move | rest_steps], acc, remaining) do
+    first(rest_steps, [move | acc], remaining - 1)
   end
-  defp first([{action, count} | rest], acc, remaining) do
-    first([{action, count - 1}] ++ rest, [{action, 1} | acc], remaining - 1)
+  defp first([{action, count} | rest_steps], acc, remaining) do
+    first([{action, count - 1}] ++ rest_steps, [{action, 1} | acc], remaining - 1)
   end
 end

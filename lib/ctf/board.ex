@@ -1,17 +1,16 @@
 defmodule Ctf.Board do
-  # {x => y => [<list of things in that cell>]}
-  @enforce_keys [:cells, :players, :flags, :obstacles, :width, :height]
-  defstruct cells: nil, players: nil, flags: nil, obstacles: [], width: nil, height: nil
+  @enforce_keys [:players, :flags, :obstacles, :width, :height, :events]
+  defstruct players: nil, flags: nil, obstacles: [], width: nil, height: nil, events: nil
 
   alias Ctf.{Player, Obstacle, Flag}
 
   @type t() :: %__MODULE__{
-          cells: Map.t,
           players: [Player.t],
           flags: [Flag.t],
           obstacles: List.t,
           width: Integer.t,
-          height: Integer.t
+          height: Integer.t,
+          events: [Tuple.t()]
   }
 
   @direction_notation [n: "\u02C4", s: "\u02C5", e: "\u02C3", w: "\u02C2"]
@@ -35,7 +34,7 @@ defmodule Ctf.Board do
       flags
     )
 
-    {cells_with_obstacles, obstacles} = place_obstacles(
+    {_cells_with_obstacles, obstacles} = place_obstacles(
       cells_with_players,
       width,
       height,
@@ -43,39 +42,52 @@ defmodule Ctf.Board do
     )
 
     %__MODULE__{
-      cells: cells_with_obstacles,
       players: players,
       flags: flags,
       obstacles: obstacles,
       width: width,
-      height: height
+      height: height,
+      events: []
     }
   end
 
-  def is_empty?(%__MODULE__{} = board, x, y) do
+  # assumes x and y are within bounds
+  def get_cell_contents(%__MODULE__{} = board, x, y) do
+    Enum.reduce([:obstacles, :flags, :players], [], fn type, acc ->
+      things_of_type = Map.from_struct(board)[type]
+      Enum.filter(things_of_type, fn thing -> thing.x == x && thing.y == y end) ++ acc
+    end)
+    |> Enum.reverse()
+  end
+
+  def is_empty(%__MODULE__{} = board, x, y) do
+    case get_cell_contents(board, x, y) do
+      [] -> true
+      _ -> false
+    end
   end
 
   def dump(%__MODULE__{} = board) do
-    IO.puts "\n\n"
-
-    Enum.each(0..(board.width-1), fn(x) ->
-      row = board.cells[x] || %{}
-
-      IO.puts Enum.join(
-        Enum.map(0..(board.height-1), fn(y) ->
-          case row[y] do
-            nil ->
-              [IO.ANSI.blue, "__"]
-            %Player{number: number, direction: direction} ->
-              [IO.ANSI.yellow, "#{number}#{@direction_notation[direction]}"]
-            %Flag{number: number} ->
-              [IO.ANSI.green, "F#{number}"]
-            %Obstacle{} ->
-              [IO.ANSI.red, "XX"]
-          end
-        end), " "
-      )
-    end)
+    [
+      "\n\n",
+      for y <- 0..(board.height - 1) do
+        for x <- 0..(board.width - 1) do
+          case get_cell_contents(board, x, y) do
+            [] ->
+              [IO.ANSI.blue(), "__"]
+            [%Obstacle{} | _] ->
+              [IO.ANSI.red(), "XX"]
+            [%Player{number: number, direction: direction} | _] ->
+              [IO.ANSI.yellow(), "#{number}#{@direction_notation[direction]}"]
+            [%Flag{number: number} | _] ->
+              [IO.ANSI.green(), "F#{number}"]
+          end ++ [IO.ANSI.reset(), " "]
+        end ++ ["\n"]
+      end,
+      IO.ANSI.reset(),
+      "\n\n"
+    ]
+    |> IO.puts()
   end
 
   defp place_players(cells, width, height, players, flags) do

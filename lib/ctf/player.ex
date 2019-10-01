@@ -65,10 +65,14 @@ defmodule Ctf.Player do
     end}
   end
 
+  def get_displacement(%__MODULE__{direction: direction}) do
+    @direction_move_displacement[direction]
+  end
+
   # no validation is done here: it is expected the caller will
   # determine if this is a valid move (we don't know how big the board is)
   def move(%__MODULE__{} = player) do
-    {x_change, y_change} = @direction_move_displacement[player.direction]
+    {x_change, y_change} = get_displacement(player)
      %__MODULE__{player | x: player.x + x_change, y: player.y + y_change}
   end
 
