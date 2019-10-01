@@ -23,39 +23,42 @@ defmodule Ctf.Game do
     perform_game_loop(:ok, game, [])
   end
 
-  defp perform_game_loop({:win, player_number}, _, boards), do: {player_number, boards}
-  defp perform_game_loop(:ok, game, boards) do
+  defp perform_game_loop(:ok, game, frames) do
     {move_lists, players} =
       Enum.reduce(game.board.players, {[], []}, fn player, {move_lists, players} ->
         {move_list, new_state} = apply(player.module, :turn, [game, player.state])
         {move_lists ++ [move_list], players ++ [%Player{player | state: new_state}]}
       end)
 
-    {status, game, new_boards} =
+    {status, game, new_frames} =
       lockstep(move_lists, 3)
-      |> advance_steps(%__MODULE__{game | board: %{game.board | players: players}}, [])
+      |> advance_steps(:ok, %__MODULE__{game | board: %{game.board | players: players}}, [])
 
-    perform_game_loop(status, game, boards ++ new_boards)
+    perform_game_loop(status, game, frames ++ new_frames)
   end
+  defp perform_game_loop(status, _, frames), do: {status, frames}
 
-  defp advance_steps([], game, new_boards), do: {:ok, game, new_boards}
-  defp advance_steps([{p1_move, p2_move} | rest], game, new_boards) do
+  defp advance_steps([{p1_move, p2_move} | rest], :ok, game, frames) do
     require IEx
     IEx.pry
 
 
+    # after each set of 2, evaluate win, loss
     # have to perform fires first in same lockstep
     # have to perform moves in order to prevent timing problems
     # -> ^, has to be performed in opposite order in same lockstep
-    # clear collisions
+    # clear collisions on each call to create_frame
     # not only need to detect collision on move, but also record if someone else landed in the space in the
     #   same frame as the one being collided in
 
 
-    Enum.zip([p1_move, p2_move], game.board.players)
-    #|> create_frame(:ok, [game])
-    #|> validate_board()
+    move_players = Enum.zip([p1_move, p2_move], game.board.players)
+    {frame_status, new_frames} = create_frame(:ok, move_players, [game])
+    [newest_game | _] = Enum.reverse(new_frames)
+    advance_steps(rest, frame_status, newest_game, frames ++ new_frames)
   end
+  defp advance_steps([], :ok, game, frames), do: {:ok, game, frames}
+  defp advance_steps(_, status, game, frames), do: {status, game, frames}
 
   defp create_frame([], status, frames) do
     # reverse and return all but final frame
