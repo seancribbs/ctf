@@ -234,13 +234,13 @@ defmodule Ctf.Game do
 
               case new_players do
                 [%Player{health_points: 0}, %Player{health_points: 0}] ->
-                  create_frame(:draw, rest_steps, [updated_frame])
+                  create_frame(:draw, rest_steps, [updated_frame, original_frame])
                 [%Player{health_points: 0}, other_player] ->
-                  create_frame({:win, other_player}, rest_steps, [updated_frame])
+                  create_frame({:win, other_player}, rest_steps, [updated_frame, original_frame])
                 [other_player, %Player{health_points: 0}] ->
-                  create_frame({:win, other_player}, rest_steps, [updated_frame])
+                  create_frame({:win, other_player}, rest_steps, [updated_frame, original_frame])
                 _ ->
-                  create_frame(status, rest_steps, [updated_frame])
+                  create_frame(status, rest_steps, [updated_frame, original_frame])
               end
             [{:fire, _, _}] ->
               # hit a player, but previous frame was a fire event, so create new frame
