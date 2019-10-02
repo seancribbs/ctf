@@ -33,9 +33,16 @@ defmodule Ctf.Game do
         {move_lists ++ [move_list], acc ++ [%Player{player | state: new_state}]}
       end)
 
+    locksteps = lockstep(move_lists, 3)
+
+    game_with_updated_player_states =
+      %__MODULE__{game | board: %Board{game.board | players: players}}
+
     {status, new_frames} =
-      lockstep(move_lists, 3)
-      |> Enum.reduce({:ok, [game]}, fn {p1_move, p2_move}, {status, [latest_frame | _] = acc} ->
+      locksteps
+      |> Enum.reduce(
+        {:ok, [game_with_updated_player_states]},
+        fn {p1_move, p2_move}, {status, [latest_frame | _] = acc} ->
            if status == :ok do
              # displacement calcs to make sure we do moves in proper order
              # if player 1 were to move to where player 2 is currently, then do
@@ -71,11 +78,14 @@ defmodule Ctf.Game do
                # locksteps sometimes have nil values for one player (and one player only)
                |> Enum.filter(fn {move, _} -> !is_nil(move) end)
 
-             # clear events on each call to create_frame
-             frame_with_cleared_events =
-               %__MODULE__{latest_frame | board: %Board{latest_frame.board | events: []}}
+             frame_with_cleared_events = clear_events(latest_frame)
 
-             {frame_status, new_frames} = create_frame(:ok, move_players_maybe_reversed, [frame_with_cleared_events])
+             move_players_with_numbers_only =
+               move_players_maybe_reversed
+               |> Enum.map(fn {move, %Player{number: number}} -> {move, number} end)
+
+             # move_players_maybe_reversed can't be used for second element -- it will be out of date
+             {frame_status, new_frames} = create_frame(:ok, move_players_with_numbers_only, [frame_with_cleared_events])
              {frame_status, new_frames ++ acc}
            else
              # TODO: could probably use :halt here, but it's only 3, so I'll look later
@@ -83,18 +93,24 @@ defmodule Ctf.Game do
            end
          end)
 
+    [newest_frame | _] = new_frames
     [_initial_seed_frame | rest_frames] = Enum.reverse(new_frames)
-    perform_game_loop(status, game, frames ++ Enum.reverse(rest_frames), count+1)
+    perform_game_loop(status, newest_frame, frames ++ Enum.reverse(rest_frames), count+1)
   end
   defp perform_game_loop(status, _, frames, _), do: {status, frames}
+
+  defp clear_events(frame) do
+    %__MODULE__{frame | board: %Board{frame.board | events: []}}
+  end
 
   defp create_frame(status, [], frames) do
     # reverse and return all but final frame
     [_initial_game | rest_frames] = Enum.reverse(frames)
     {status, Enum.reverse(rest_frames)}
   end
-  defp create_frame(status, [{{:fire, count}, %Player{x: x, y: y} = player} | rest_steps], frames) do
+  defp create_frame(status, [{{:fire, count}, player_number} | rest_steps], frames) do
     [newest_frame | rest_frames] = frames
+    player = %Player{x: x, y: y, number: ^player_number} = Enum.at(newest_frame.board.players, player_number - 1)
 
     case detect_collision(player, newest_frame, {x, y}, count) do
       {:player, %Player{health_points: health_points, number: number} = hit_player} ->
@@ -115,6 +131,9 @@ defmodule Ctf.Game do
           cond do
             # no other fires in this frame, as we order fires first
             newest_frame.board.events == [] ->
+              [updated_frame | frames]
+            # need to keep original in case of rollback necessity
+            rest_frames == [] -> 
               [updated_frame | frames]
             # other fires in this frame, so just update the same fire frame
             true ->
@@ -140,6 +159,9 @@ defmodule Ctf.Game do
             # no other fires in this frame, as we order fires first
             newest_frame.board.events == [] ->
               [updated_frame | frames]
+            # need to keep original in case of rollback necessity
+            rest_frames == [] -> 
+              [updated_frame | frames]
             # other fires in this frame, so just update the same fire frame
             true ->
               [updated_frame | rest_frames]
@@ -148,8 +170,10 @@ defmodule Ctf.Game do
         create_frame(status, rest_steps, updated_frames)
     end
   end
-  defp create_frame(status, [{{direction, 1}, %Player{number: number} = player} | rest_steps], frames) when direction in [:clockwise, :counterclockwise] do
+  defp create_frame(status, [{{direction, 1}, player_number} | rest_steps], frames) when direction in [:clockwise, :counterclockwise] do
     [newest_frame | rest_frames] = frames 
+    player = %Player{number: ^player_number} = Enum.at(newest_frame.board.players, player_number - 1)
+
     new_rotated_player = Player.rotate(player, direction)
 
     updated_frame =
@@ -157,23 +181,29 @@ defmodule Ctf.Game do
         board: %Board{newest_frame.board|
           players: List.replace_at(
             newest_frame.board.players,
-            number - 1,
+            player_number - 1,
             new_rotated_player
           ),
         }
       }
 
     updated_frames =
-      if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
-        [updated_frame | frames]
-      else
-        [updated_frame | rest_frames]
+      cond do
+        length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire ->
+          [clear_events(updated_frame) | frames]
+        # need to keep original in case of rollback necessity
+        rest_frames == [] -> 
+          [updated_frame | frames]
+        true ->
+          [updated_frame | rest_frames]
       end
 
     create_frame(status, rest_steps, updated_frames)
   end
-  defp create_frame(status, [{{:move, 1}, %Player{number: number, x: x, y: y, health_points: health_points} = player} | rest_steps], frames) do 
+  defp create_frame(status, [{{:move, 1}, player_number} | rest_steps], frames) do 
     [newest_frame | rest_frames] = frames
+    player = %Player{x: x, y: y, health_points: health_points, number: ^player_number} =
+      Enum.at(newest_frame.board.players, player_number - 1)
 
     case detect_collision(player, newest_frame, {x, y}, 1) do
       {:player, %Player{x: hit_x, y: hit_y, health_points: health_points} = hit_player} ->
@@ -217,61 +247,101 @@ defmodule Ctf.Game do
               no_move_and_reduce_health(newest_frame, frames, status, rest_steps, hit_player, player)
             _ ->
               # hit a player, but no conflicting events
-              no_move_and_reduce_health(newest_frame, rest_frames, status, rest_steps, hit_player, player)
+              frames_to_append =
+                if rest_frames == [] do
+                  frames
+                else
+                  rest_frames
+                end
+              no_move_and_reduce_health(newest_frame, frames_to_append, status, rest_steps, hit_player, player)
           end
         else
           # hit a player, but no events
-          no_move_and_reduce_health(newest_frame, rest_frames, status, rest_steps, hit_player, player)
+          frames_to_append =
+            if rest_frames == [] do
+              frames
+            else
+              rest_frames
+            end
+          no_move_and_reduce_health(newest_frame, frames_to_append, status, rest_steps, hit_player, player)
         end
       {type, _} = barrier when type in [:edge, :obstacle] ->
         new_player = %Player{player | health_points: health_points - 1}
+
+        last_event_was_fire = length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire
+
+        appendable_events =
+          if last_event_was_fire do
+            []
+          else
+            newest_frame.board.events
+          end
+
         updated_frame =
           %__MODULE__{newest_frame |
             board: %Board{newest_frame.board |
               players: List.replace_at(
                 newest_frame.board.players,
-                number - 1,
+                player_number - 1,
                 new_player
               ),
-              events: [{:collision, barrier} | (newest_frame.board.events || [])]
+              events: [{:collision, barrier} | appendable_events]
             }
           }
 
         updated_frames =
-          if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
-            [updated_frame | frames]
-          else
-            [updated_frame | rest_frames]
+          cond do
+            last_event_was_fire ->
+              [updated_frame | frames]
+            # need to keep original in case of rollback necessity
+            rest_frames == [] -> 
+              [updated_frame | frames]
+            true ->
+              [updated_frame | rest_frames]
           end
 
         case {new_player.health_points, status} do
           {0, :ok} ->
-            other_player = Enum.filter(newest_frame.board.players, fn prospect -> prospect != new_player end)
+            [other_player] = Enum.filter(updated_frame.board.players, fn prospect -> prospect != new_player end)
             create_frame({:win, other_player}, rest_steps, updated_frames)
           {0, {:win, _}} ->
             create_frame(:draw, rest_steps, updated_frames)
           _ ->
             create_frame(status, rest_steps, updated_frames)
         end
-      {:flag, %Flag{x: flag_x, y: flag_y, number: flag_number}} when flag_number != number ->
+      {:flag, %Flag{x: flag_x, y: flag_y, number: flag_number}} when flag_number != player_number ->
         new_player = %Player{player | x: flag_x, y: flag_y}
+
+        last_event_was_fire = length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire
+
+        appendable_events =
+          if last_event_was_fire do
+            []
+          else
+            newest_frame.board.events
+          end
+
         updated_frame =
           %__MODULE__{newest_frame |
             board: %Board{newest_frame.board |
               players: List.replace_at(
                 newest_frame.board.players,
-                number - 1,
+                player_number - 1,
                 new_player
               ),
-              events: [{:move, %{x: flag_x, y: flag_y}} | (newest_frame.board.events || [])]
+              events: [{:move, %{x: flag_x, y: flag_y}} | appendable_events]
             }
           }
 
         updated_frames =
-          if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
-            [updated_frame | frames]
-          else
-            [updated_frame | rest_frames]
+          cond do
+            last_event_was_fire ->
+              [updated_frame | frames]
+            # need to keep original in case of rollback necessity
+            rest_frames == [] -> 
+              [updated_frame | frames]
+            true ->
+              [updated_frame | rest_frames]
           end
 
         # if not other's player's flag, no collision/win
@@ -279,26 +349,40 @@ defmodule Ctf.Game do
           :ok -> create_frame({:win, new_player}, rest_steps, updated_frames)
           {:win, _} -> create_frame(:draw, rest_steps, updated_frames)
         end
-      {:miss, %{x: new_x, y: new_y}} ->
+      {own_flag_or_miss, %{x: new_x, y: new_y}} when own_flag_or_miss in [:flag, :miss] ->
         # no collision, just advance player
         new_player = %Player{player | x: new_x, y: new_y}
+
+        last_event_was_fire = length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire
+
+        appendable_events =
+          if last_event_was_fire do
+            []
+          else
+            newest_frame.board.events
+          end
+
         updated_frame =
           %__MODULE__{newest_frame |
             board: %Board{newest_frame.board |
               players: List.replace_at(
                 newest_frame.board.players,
-                number - 1,
+                player_number - 1,
                 new_player
               ),
-              events: [{:move, %{x: new_x, y: new_y}} | (newest_frame.board.events || [])]
+              events: [{:move, %{x: new_x, y: new_y}} | appendable_events]
             }
           }
 
         updated_frames =
-          if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
-            [updated_frame | frames]
-          else
-            [updated_frame | rest_frames]
+          cond do
+            last_event_was_fire ->
+              [updated_frame | frames]
+            # need to keep original in case of rollback necessity
+            rest_frames == [] -> 
+              [updated_frame | frames]
+            true ->
+              [updated_frame | rest_frames]
           end
 
         create_frame(status, rest_steps, updated_frames)
@@ -313,15 +397,25 @@ defmodule Ctf.Game do
         new_players = Enum.map(newest_frame.board.players, fn %Player{health_points: health_points} = board_player ->
           %Player{board_player | health_points: health_points - 1}
         end)
-  
+
+        last_event_was_fire = length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire
+
+        appendable_events =
+          if last_event_was_fire do
+            []
+          else
+            newest_frame.board.events
+          end
+
+
         updated_frame =
           %__MODULE__{newest_frame |
             board: %Board{newest_frame.board |
               players: new_players,
-              events: [{:collision, hit_player}, {:collision, player}] ++ (newest_frame.board.events || [])
+              events: [{:collision, hit_player}, {:collision, player}] ++ appendable_events
             }
           }
-  
+
         updated_frames = [updated_frame | rest_frames]
   
         case new_players do
