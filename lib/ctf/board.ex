@@ -53,11 +53,10 @@ defmodule Ctf.Board do
 
   # assumes x and y are within bounds
   def get_cell_contents(%__MODULE__{} = board, x, y) do
-    Enum.reduce([:obstacles, :flags, :players], [], fn type, acc ->
+    Enum.reduce([:flags, :players, :obstacles], [], fn type, acc ->
       things_of_type = Map.from_struct(board)[type]
       Enum.filter(things_of_type, fn thing -> thing.x == x && thing.y == y end) ++ acc
     end)
-    |> Enum.reverse()
   end
 
   def is_empty(%__MODULE__{} = board, x, y) do

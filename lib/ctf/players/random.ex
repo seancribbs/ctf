@@ -5,8 +5,8 @@ defmodule Ctf.Players.Random do
   @moves [:fire, :clockwise, :counterclockwise, :move]
 
   @impl Ctf.Player
-  def turn(game = %Game{}, state) do
-    {accumulate_turns([], 3), state}
+  def turn(_game = %Game{}, _state) do
+    {accumulate_turns([], 3), Enum.random(1..10000)}
   end
 
   def name() do

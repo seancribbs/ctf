@@ -45,7 +45,7 @@ defmodule Ctf.Game do
              # to move into player 2.
 
              p1_will_move_into_p2 =
-               if elem(p1_move, 0) == :move do
+               if !is_nil(p1_move) && elem(p1_move, 0) == :move do
                  [%Player{number: 1, x: x, y: y} = player1, player2] = players
                  {displace_x, displace_y} = Player.get_displacement(player1)
                  new_cell_x = displace_x + x 
@@ -58,7 +58,7 @@ defmodule Ctf.Game do
              move_players = Enum.zip([p1_move, p2_move], players)
              move_players_maybe_reversed =
                cond do
-                 elem(p1_move, 0) != :fire && elem(p2_move, 0) == :fire ->
+                 !is_nil(p1_move) && !is_nil(p2_move) && elem(p1_move, 0) != :fire && elem(p2_move, 0) == :fire ->
                    # have to perform fires first in same lockstep
                    Enum.reverse(move_players)
                  p1_will_move_into_p2 ->
@@ -68,12 +68,14 @@ defmodule Ctf.Game do
                    #no need to reverse
                    move_players
                end
+               # locksteps sometimes have nil values for one player (and one player only)
+               |> Enum.filter(fn {move, _} -> !is_nil(move) end)
 
              # clear events on each call to create_frame
              frame_with_cleared_events =
                %__MODULE__{latest_frame | board: %Board{latest_frame.board | events: []}}
 
-             {frame_status, new_frames} = create_frame(move_players_maybe_reversed, :ok, [frame_with_cleared_events])
+             {frame_status, new_frames} = create_frame(:ok, move_players_maybe_reversed, [frame_with_cleared_events])
              {frame_status, new_frames ++ acc}
            else
              # TODO: could probably use :halt here, but it's only 3, so I'll look later
@@ -105,7 +107,7 @@ defmodule Ctf.Game do
                 number - 1,
                 new_hit_player
               ),
-              events: [{:fire, {x, y}, hit_player} | (newest_frame.board.events || [])]
+              events: [{:fire, %{x: x, y: y}, hit_player} | (newest_frame.board.events || [])]
             }
           }
 
@@ -129,7 +131,7 @@ defmodule Ctf.Game do
         updated_frame =
           %__MODULE__{newest_frame |
             board: %Board{newest_frame.board |
-              events: [{:fire, {x, y}, barrier} | (newest_frame.board.events || [])]
+              events: [{:fire, %{x: x, y: y}, barrier} | (newest_frame.board.events || [])]
             }
           }
 
@@ -162,7 +164,7 @@ defmodule Ctf.Game do
       }
 
     updated_frames =
-      if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+      if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
         [updated_frame | frames]
       else
         [updated_frame | rest_frames]
@@ -175,7 +177,7 @@ defmodule Ctf.Game do
 
     case detect_collision(player, newest_frame, {x, y}, 1) do
       {:player, %Player{x: hit_x, y: hit_y, health_points: health_points} = hit_player} ->
-        if !is_nil(newest_frame.board.events) do
+        if length(newest_frame.board.events) > 0 do
           case newest_frame.board.events do
             [{:collision, %Player{}}] ->
               # already collided in last frame, so no updates necessary
@@ -236,7 +238,7 @@ defmodule Ctf.Game do
           }
 
         updated_frames =
-          if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+          if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
             [updated_frame | frames]
           else
             [updated_frame | rest_frames]
@@ -266,7 +268,7 @@ defmodule Ctf.Game do
           }
 
         updated_frames =
-          if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+          if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
             [updated_frame | frames]
           else
             [updated_frame | rest_frames]
@@ -293,7 +295,7 @@ defmodule Ctf.Game do
           }
 
         updated_frames =
-          if !is_nil(newest_frame.board.events) && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
+          if length(newest_frame.board.events) > 0 && elem(Enum.at(newest_frame.board.events, 0), 0) == :fire do
             [updated_frame | frames]
           else
             [updated_frame | rest_frames]
@@ -354,7 +356,10 @@ defmodule Ctf.Game do
       new_cell_y < 0 ->
         {:edge, %{x: new_cell_x, y: 0}}
       true ->
-        case get_in(game.board.cells, [new_cell_x, new_cell_y]) do
+        content =
+          Board.get_cell_contents(game.board, new_cell_x, new_cell_y)
+          |> List.first()
+        case content do
           %Player{} = p -> {:player, p}
           %Obstacle{} = o -> {:obstacle, o}
           %Flag{} = f -> {:flag, f}
