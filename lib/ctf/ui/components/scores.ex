@@ -23,7 +23,6 @@ defmodule Ctf.UI.Components.Scores do
     player = Enum.find(board.players, &(&1.number == number))
 
     translate = Scenic.Math.Vector2.add(opts[:translate], {(number - 1) * (opts[:width] / 2) + 20, 0})
-    IO.inspect(translate, label: "player #{number} score")
 
     color =
       if number == 1 do
