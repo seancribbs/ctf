@@ -15,7 +15,7 @@ decision, so don't spend too much time computing your move.
 * On each turn, each player has (maximum) three action points and may allocate
   them among three action types:
   * Move forward `n` squares (`move: n`)
-  * Rotate clockwise 90 degrees `n` times (`rotate: n`)
+  * Rotate clockwise or counterclockwise 90 degrees `n` times (`clockwise: n`, `counterclockwise: n`)
   * Fire forward `n` squares (`fire: n`)
 * After actions are decided and validated, player tanks perform the actions
   simultaneously in lock-step. Collisions damage both tanks and nullify the
@@ -29,14 +29,14 @@ Some example turns might be:
 
 ```elixir
 # Move forward twice, rotate clockwise once
-[move: 2, rotate: 1]
+[move: 2, clockwise: 1]
 
 # Fire at opponent 3 squares away
 [fire: 3]
 
 # Invalid turn, only first three actions used. 
 # Essentially the same as the first turn above.
-[move: 2, rotate: 2]
+[move: 2, clockwise: 2]
 ```
 
 ## Defining Your Player
@@ -58,7 +58,3 @@ defmodule Ctf.Player do
   @optional_callbacks [name: 0]
 end
 ```
-
-### Taking Your Turn
-
-
