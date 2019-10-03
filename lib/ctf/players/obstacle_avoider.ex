@@ -31,7 +31,7 @@ defmodule Ctf.Players.ObstacleAvoider do
         new_player = Player.move(player)
         accumulate_turns([{:move, 1} | acc], game, new_player, remaining - 1)
       # who knows, we might win here
-      [%Flag{} | _] ->
+      [%Flag{}] ->
         new_player = Player.move(player)
         accumulate_turns([{:move, 1} | acc], game, new_player, remaining - 1)
       # otherwise turn clockwise (until you can eventually move forward)
