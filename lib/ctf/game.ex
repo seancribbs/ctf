@@ -30,7 +30,7 @@ defmodule Ctf.Game do
   defp perform_game_loop(:ok, game, frames, count) do
     {move_lists, players} =
       Enum.reduce(game.board.players, {[], []}, fn player, {move_lists, acc} ->
-        {move_list, new_state} = apply(player.module, :turn, [game, player.state])
+        {move_list, new_state} = apply(player.module, :turn, [game, player, player.state])
         {move_lists ++ [move_list], acc ++ [%Player{player | state: new_state}]}
       end)
 
@@ -452,6 +452,7 @@ defmodule Ctf.Game do
         {:edge, %{x: new_cell_x, y: 0}}
       true ->
         content =
+          # prioritized in Player as obstacle, then player, then flag
           Board.get_cell_contents(game.board, new_cell_x, new_cell_y)
           |> List.first()
         case content do

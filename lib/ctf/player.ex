@@ -89,7 +89,7 @@ defmodule Ctf.Player do
     }
   end
 
-  def get_displacement(%__MODULE__{direction: direction}) do
+  def get_displacement(%{direction: direction}) do
     @direction_move_displacement[direction]
   end
 

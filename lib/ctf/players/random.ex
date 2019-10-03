@@ -1,14 +1,15 @@
 defmodule Ctf.Players.Random do
   @behaviour Ctf.Player
-  alias Ctf.Game
+  alias Ctf.{Game, Player}
 
   @moves [:fire, :clockwise, :counterclockwise, :move]
 
   @impl Ctf.Player
-  def turn(_game = %Game{}, _state) do
+  def turn(_game = %Game{}, _player = %Player{}, _state) do
     {accumulate_turns([], 3), Enum.random(1..10000)}
   end
 
+  @impl Ctf.Player
   def name() do
     # yes, collsions will happen.  deal with it.
     "Random #{trunc(:rand.uniform() * 100_000)}"

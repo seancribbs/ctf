@@ -50,7 +50,7 @@ defmodule Ctf.Player do
   @type actions() :: [move: 1..3, rotate: 1..3, fire: 1..3]
 
   # Implement this function!
-  @callback turn(Game.t(), state()) :: {actions(), state()}
+  @callback turn(Game.t(), Player.t(), state()) :: {actions(), state()}
   
   # Name your player (optional, defaults to the module name)
   @callback name() :: String.t()
