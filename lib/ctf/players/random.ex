@@ -9,7 +9,6 @@ defmodule Ctf.Players.Random do
     {accumulate_turns([], 3), Enum.random(1..10000)}
   end
 
-  @impl Ctf.Player
   def name() do
     # yes, collsions will happen.  deal with it.
     "Random #{trunc(:rand.uniform() * 100_000)}"

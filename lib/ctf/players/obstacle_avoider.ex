@@ -6,7 +6,6 @@ defmodule Ctf.Players.ObstacleAvoider do
 
   @moves [:fire, :clockwise, :counterclockwise, :move]
 
-  @impl Ctf.Player
   def name() do
     "Obstacle Avoider Tank #{trunc(:rand.uniform() * 100)}"
   end
@@ -25,17 +24,18 @@ defmodule Ctf.Players.ObstacleAvoider do
     new_cell_x = displace_x + x
     new_cell_y = displace_y + y
 
-    case Board.get_cell_contents(game.board, new_cell_x, new_cell_y) do
+    contents = Board.get_cell_contents(game.board, new_cell_x, new_cell_y)
+    cond do
       # go forward if you can
-      [] ->
+      contents == [] and new_cell_x < game.board.width and new_cell_y < game.board.height and new_cell_x >= 0 and new_cell_y >= 0 ->
         new_player = Player.move(player)
         accumulate_turns([{:move, 1} | acc], game, new_player, remaining - 1)
       # who knows, we might win here
-      [%Flag{}] ->
+      match?([%Flag{}], contents) ->
         new_player = Player.move(player)
         accumulate_turns([{:move, 1} | acc], game, new_player, remaining - 1)
       # otherwise turn clockwise (until you can eventually move forward)
-      _ ->
+      true ->
         new_player = Player.rotate(player, :clockwise)
         accumulate_turns([{:clockwise, 1} | acc], game, new_player, remaining - 1)
     end

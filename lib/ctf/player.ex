@@ -13,7 +13,7 @@ defmodule Ctf.Player do
   @type state() :: any()
   @type actions() :: [move: 1..3, rotate: 1..3, fire: 1..3]
 
-  @callback turn(Ctf.Game.t(), state()) :: {actions(), state()}
+  @callback turn(Ctf.Game.t(), Ctf.Player.t(), state()) :: {actions(), state()}
 
   @type t() :: %__MODULE__{
           number: Integer.t(),
