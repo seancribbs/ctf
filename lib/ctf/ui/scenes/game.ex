@@ -9,7 +9,24 @@ defmodule Ctf.UI.Scenes.Game do
 
   @grid_count 20
 
+  def next_frame(board) do
+    GenServer.cast(__MODULE__, {:next, board})
+  end
+
+  def demo() do
+    game = Ctf.Game.new([%{health_points: 5, module: Ctf.Players.Seeker}, %{health_points: 5, module: Ctf.Players.Random}])
+    result = {_status, frames} = Ctf.Game.play(game)
+    for frame <- frames do
+      next_frame(frame.board)
+      Process.sleep(1000)
+    end
+    result
+  end
+
   def init(_, opts) do
+    # TODO: There's a better way to do this but it's a bit harder
+    Process.register(self(), __MODULE__)
+
     viewport = opts[:viewport]
     board = dummy_board()
 
@@ -19,6 +36,15 @@ defmodule Ctf.UI.Scenes.Game do
       |> C.Scores.add_to_graph(board, width: 601, height: 50, translate: {0, 600})
 
     {:ok, %{graph: graph, viewport: viewport}, push: graph}
+  end
+
+  def handle_cast({:next, %Board{} = board}, %{graph: graph} = state) do
+    next_graph =
+      graph
+      |> C.Board.modify(board)
+      |> C.Scores.modify(board)
+
+    {:noreply, %{state| graph: next_graph}, push: next_graph}
   end
 
   defp dummy_board do

@@ -1,7 +1,6 @@
 defmodule Ctf.UI.Components.Board do
-  use Scenic.Component
-  alias Scenic.Graph
   import Scenic.Primitives
+  alias Scenic.Graph
   alias Ctf.UI.Sprites
   alias Ctf.UI.Objects, as: O
 
@@ -10,44 +9,41 @@ defmodule Ctf.UI.Components.Board do
   # assumes 20x20, but is only for initial graph state
   @default_square_size 30
 
-  @dirt_squares (for x <- 0..5, y <- 0..5 do
-                   fn graph ->
-                     rectangle(graph, {128, 128},
-                       fill: {:image, Sprites.sprite("dirt")},
-                       translate: {x * 120 - 8, y * 120 - 8},
-                       scale: 0.9375
-                     )
-                   end
-                 end)
-
-  @flags (for {color, idx} <- Enum.with_index(~w(red blue)a, 1) do
-            &O.Flag.add_to_graph(&1, {color, @default_square_size, 0, 0}, id: {:flag, idx})
-          end)
-
-  @tanks (for {color, idx} <- Enum.with_index(~w(red blue)a, 1) do
-            &O.Tank.add_to_graph(&1, color, @default_square_size, :n, 0, 0, id: {:player, idx})
-          end)
-
-  @init_graph Enum.reduce(@dirt_squares ++ @tanks ++ @flags, Graph.build(), fn f, g -> f.(g) end)
-
-  @impl true
-  def verify(%Ctf.Board{} = b) do
-    {:ok, b}
+  def add_to_graph(graph, board, _opts) do
+    graph
+    |> add_statics()
+    |> add_grid(board)
+    |> add_obstacles(board)
+    |> position_objects(board)
   end
 
-  def verify(_other) do
-    "must be a Ctf.Board struct"
+  def modify(graph, board) do
+    position_objects(graph, board)
   end
 
-  @impl true
-  def init(board, _opts) do
-    graph =
-      @init_graph
-      |> add_grid(board)
-      |> add_obstacles(board)
-      |> position_objects(board)
+  defp add_statics(graph) do
+    dirt_squares =
+      for x <- 0..5, y <- 0..5 do
+        fn graph ->
+          rectangle(graph, {128, 128},
+            fill: {:image, Sprites.sprite("dirt")},
+            translate: {x * 120 - 8, y * 120 - 8},
+            scale: 0.9375
+          )
+        end
+      end
 
-    {:ok, %{graph: graph, board: board}, push: graph}
+    flags =
+      for {color, idx} <- Enum.with_index(~w(red blue)a, 1) do
+        &O.Flag.add_to_graph(&1, {color, @default_square_size, 0, 0}, id: {:flag, idx})
+      end
+
+    tanks =
+      for {color, idx} <- Enum.with_index(~w(red blue)a, 1) do
+        &O.Tank.add_to_graph(&1, color, @default_square_size, :n, 0, 0, id: {:player, idx})
+      end
+
+    Enum.reduce(dirt_squares ++ flags ++ tanks, graph, fn f, g -> f.(g) end)
   end
 
   defp add_grid(graph, board) do
@@ -98,28 +94,42 @@ defmodule Ctf.UI.Components.Board do
   defp position_objects(graph, board) do
     ss = square_size(board)
     # Move players first
-    graph =
-      Enum.reduce(board.players, graph, fn player, graph ->
-        Graph.modify(
-          graph,
-          {:player, player.number},
-          &O.Tank.adjust_position(
-            &1,
-            ss,
-            player.direction,
-            player.x,
-            player.y
-          )
-        )
-      end)
+    graph
+    |> position_players(board, ss)
+    |> position_flags(board, ss)
+    |> position_obstacles(board, ss)
+  end
 
-    board.flags
+  defp position_obstacles(graph, board, ss) do
+    board.obstacles
     |> Enum.with_index(1)
-    |> Enum.reduce(graph, fn {flag, i}, graph ->
+    |> Enum.reduce(graph, fn {o, i}, g ->
+      Graph.modify(g, {:obstacle, i}, &O.Obstacle.adjust_position(&1, ss, o.x, o.y))
+    end)
+  end
+
+  defp position_flags(graph, board, ss) do
+    Enum.reduce(board.flags, graph, fn flag, graph ->
       Graph.modify(
         graph,
-        {:flag, i},
+        {:flag, flag.number},
         &O.Flag.adjust_position(&1, ss, flag.x, flag.y)
+      )
+    end)
+  end
+
+  defp position_players(graph, board, ss) do
+    Enum.reduce(board.players, graph, fn player, graph ->
+      Graph.modify(
+        graph,
+        {:player, player.number},
+        &O.Tank.adjust_position(
+          &1,
+          ss,
+          player.direction,
+          player.x,
+          player.y
+        )
       )
     end)
   end
