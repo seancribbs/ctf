@@ -15,9 +15,6 @@ defmodule Ctf.UI.Scenes.Game do
   end
 
   def init(games = [_ | _], opts) do
-    # TODO: There's a better way to do this but it's a bit harder
-    Process.register(self(), __MODULE__)
-
     viewport = opts[:viewport]
 
     send(self(), :replay)
@@ -26,27 +23,27 @@ defmodule Ctf.UI.Scenes.Game do
   end
 
   def handle_info(:replay, %{graph: graph, games: games} = state) do
-    {status, [board | rest]} = hd(games)
+    {status, [game | rest]} = hd(games)
 
     graph =
       graph
-      |> C.Board.add_to_graph(board, id: :board)
-      |> C.Scores.add_to_graph(board, width: 601, height: 50, translate: {0, 600})
+      |> C.Board.add_to_graph(game.board, id: :board)
+      |> C.Scores.add_to_graph(game.board, width: 601, height: 50, translate: {0, 600})
 
     Process.send_after(self(), :next_frame, 500)
 
-    {:ok, Map.merge(state, %{graph: graph, status: status, frames: rest}), push: graph}
+    {:noreply, Map.merge(state, %{graph: graph, status: status, frames: rest}), push: graph}
   end
 
   def handle_info(:next_frame, %{frames: [], games: []} = state) do
-    {:ok, state}
+    {:noreply, state}
   end
 
-  def handle_info(:next_frame, %{graph: graph, frames: [board | rest]} = state) do
+  def handle_info(:next_frame, %{graph: graph, frames: [game | rest]} = state) do
     next_graph =
       graph
-      |> C.Board.modify(board)
-      |> C.Scores.modify(board)
+      |> C.Board.modify(game.board)
+      |> C.Scores.modify(game.board)
 
     Process.send_after(self(), :next_frame, 500)
 
