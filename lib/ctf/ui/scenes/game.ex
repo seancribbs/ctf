@@ -14,7 +14,7 @@ defmodule Ctf.UI.Scenes.Game do
   end
 
   def demo() do
-    game = Ctf.Game.new([%{health_points: 5, module: Ctf.Players.Random}, %{health_points: 5, module: Ctf.Players.Random}])
+    game = Ctf.Game.new([%{health_points: 5, module: Ctf.Players.Seeker}, %{health_points: 5, module: Ctf.Players.Random}])
     result = {_status, frames} = Ctf.Game.play(game)
     for frame <- frames do
       next_frame(frame.board)

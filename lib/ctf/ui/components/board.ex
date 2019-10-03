@@ -18,7 +18,7 @@ defmodule Ctf.UI.Components.Board do
   end
 
   def modify(graph, board) do
-    position_players(graph, board)
+    position_objects(graph, board)
   end
 
   defp add_statics(graph) do
@@ -94,22 +94,31 @@ defmodule Ctf.UI.Components.Board do
   defp position_objects(graph, board) do
     ss = square_size(board)
     # Move players first
-    graph = position_players(graph, board)
+    graph
+    |> position_players(board, ss)
+    |> position_flags(board, ss)
+    |> position_obstacles(board, ss)
+  end
 
-    board.flags
+  defp position_obstacles(graph, board, ss) do
+    board.obstacles
     |> Enum.with_index(1)
-    |> Enum.reduce(graph, fn {flag, i}, graph ->
+    |> Enum.reduce(graph, fn {o, i}, g ->
+      Graph.modify(g, {:obstacle, i}, &O.Obstacle.adjust_position(&1, ss, o.x, o.y))
+    end)
+  end
+
+  defp position_flags(graph, board, ss) do
+    Enum.reduce(board.flags, graph, fn flag, graph ->
       Graph.modify(
         graph,
-        {:flag, i},
+        {:flag, flag.number},
         &O.Flag.adjust_position(&1, ss, flag.x, flag.y)
       )
     end)
   end
 
-  defp position_players(graph, board) do
-    ss = square_size(board)
-
+  defp position_players(graph, board, ss) do
     Enum.reduce(board.players, graph, fn player, graph ->
       Graph.modify(
         graph,
