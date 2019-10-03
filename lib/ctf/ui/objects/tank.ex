@@ -5,7 +5,7 @@ defmodule Ctf.UI.Objects.Tank do
   @height 15 + 83
   @padding 3
   @width 78
-  @directions %{n: 0, w: 0.5, s: 1, e: 1.5}
+  @directions %{n: 0, w: 1.5, s: 1, e: 0.5}
 
   def add_to_graph(graph, color, size, direction, x, y, opts) do
     defaults = transforms(size, direction, x, y)

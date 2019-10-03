@@ -3,77 +3,58 @@ defmodule Ctf.UI.Scenes.Game do
   alias Scenic.Graph
 
   alias Ctf.UI.Components, as: C
-  alias Ctf.{Board, Flag, Player}
 
   @graph Graph.build()
 
-  @grid_count 20
+  def init([], opts) do
+    Process.register(self(), __MODULE__)
 
-  def next_frame(board) do
-    GenServer.cast(__MODULE__, {:next, board})
+    viewport = opts[:viewport]
+
+    {:ok, %{viewport: viewport, graph: @graph}, push: @graph}
   end
 
-  def demo() do
-    game = Ctf.Game.new([%{health_points: 5, module: Ctf.Players.Seeker}, %{health_points: 5, module: Ctf.Players.Random}])
-    result = {_status, frames} = Ctf.Game.play(game)
-    for frame <- frames do
-      next_frame(frame.board)
-      Process.sleep(1000)
-    end
-    result
-  end
-
-  def init(_, opts) do
+  def init(games = [_ | _], opts) do
     # TODO: There's a better way to do this but it's a bit harder
     Process.register(self(), __MODULE__)
 
     viewport = opts[:viewport]
-    board = dummy_board()
+
+    send(self(), :replay)
+
+    {:ok, %{graph: @graph, viewport: viewport, games: games}}
+  end
+
+  def handle_info(:replay, %{graph: graph, games: games} = state) do
+    {status, [board | rest]} = hd(games)
 
     graph =
-      @graph
+      graph
       |> C.Board.add_to_graph(board, id: :board)
       |> C.Scores.add_to_graph(board, width: 601, height: 50, translate: {0, 600})
 
-    {:ok, %{graph: graph, viewport: viewport}, push: graph}
+    Process.send_after(self(), :next_frame, 500)
+
+    {:ok, Map.merge(state, %{graph: graph, status: status, frames: rest}), push: graph}
   end
 
-  def handle_cast({:next, %Board{} = board}, %{graph: graph} = state) do
+  def handle_info(:next_frame, %{frames: [], games: []} = state) do
+    {:ok, state}
+  end
+
+  def handle_info(:next_frame, %{graph: graph, frames: [board | rest]} = state) do
     next_graph =
       graph
       |> C.Board.modify(board)
       |> C.Scores.modify(board)
 
-    {:noreply, %{state| graph: next_graph}, push: next_graph}
+    Process.send_after(self(), :next_frame, 500)
+
+    {:noreply, %{state | graph: next_graph, frames: rest}, push: next_graph}
   end
 
-  defp dummy_board do
-    # Create a dummy board for prototyping
-    f1 = %Flag{number: 1, x: 0, y: 0}
-    f2 = %Flag{number: 2, x: 0, y: 0}
-
-    p1 =
-      Player.new(
-        number: 1,
-        flag: f1,
-        x: 0,
-        y: 0,
-        health_points: 5,
-        module: Ctf.Players.Random,
-        direction: :e
-      )
-
-    p2 =
-      Player.new(
-        number: 2,
-        flag: f2,
-        x: 0,
-        y: 0,
-        health_points: 5,
-        module: Ctf.Players.Random,
-        direction: :w
-      )
-
-    Board.new(height: @grid_count, width: @grid_count, players: [p1, p2], obstacle_count: 10)
+  def handle_info(:next_frame, %{frames: [], games: [game | rest]} = state) do
+    {status, frames} = game
+    handle_info(:next_frame, Map.merge(state, %{status: status, frames: frames, games: rest}))
   end
 end

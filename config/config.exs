@@ -6,7 +6,7 @@ use Mix.Config
 config :ctf, :viewport, %{
   name: :main_viewport,
   size: {600, 650},
-  default_scene: {Ctf.UI.Scenes.Game, nil},
+  default_scene: {Ctf.UI.Scenes.Game, []},
   drivers: [
     %{
       module: Scenic.Driver.Glfw,
