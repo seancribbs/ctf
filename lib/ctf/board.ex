@@ -57,8 +57,6 @@ defmodule Ctf.Board do
       things_of_type = Map.from_struct(board)[type]
       Enum.filter(things_of_type, fn thing -> thing.x == x && thing.y == y end) ++ acc
     end)
-
-    IO.puts([IO.ANSI.reset(), "\n\n"])
   end
 
   def is_empty(%__MODULE__{} = board, x, y) do
