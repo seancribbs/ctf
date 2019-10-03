@@ -22,7 +22,13 @@ defmodule Ctf.Game do
 
   # returns status (:draw, {:win, player})
   def play(%__MODULE__{} = game) do
-    perform_game_loop(:ok, game, [], 0)
+    {status, frames} = perform_game_loop(:ok, game, [], 0)
+    frames
+    |> Enum.each(fn g ->
+         :timer.sleep(200)
+          Board.dump(g.board)
+       end)
+    {status, [game | frames]}
   end
 
   # limit to 100000 loops
