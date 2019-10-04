@@ -29,7 +29,7 @@ defmodule Ctf.Players.Skunk do
         {[fire: distance], 0}
 
       _ ->
-        {[clockwise: 1], state + Enum.random(1..3)}
+        {[clockwise: 1], state + Enum.random(1..2)}
     end
   end
 
@@ -53,7 +53,7 @@ defmodule Ctf.Players.Skunk do
   end
 
   defp check(board, x, y, direction, distance, :empty) do
-    case check_spot(board, x, y, direction, 3 - distance) do
+    case check_spot(board, x, y, direction, 4 - distance) do
       [] ->
         {:ok, distance}
 
