@@ -15,4 +15,14 @@ defmodule Ctf do
 
     Supervisor.start_link(children, strategy: :one_for_one)
   end
+
+  def do_this do
+    Ctf.Game.new([
+      %{health_points: 5, module: Ctf.Players.Skunk},
+      %{health_points: 5, module: Ctf.Players.ObstacleAvoider}
+    ])
+    |> Ctf.Game.play()
+    |> List.wrap()
+    |> Ctf.UI.start()
+  end
 end

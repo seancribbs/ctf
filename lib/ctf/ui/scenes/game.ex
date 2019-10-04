@@ -30,7 +30,7 @@ defmodule Ctf.UI.Scenes.Game do
       |> C.Board.add_to_graph(game.board, id: :board)
       |> C.Scores.add_to_graph(game.board, width: 601, height: 50, translate: {0, 600})
 
-    Process.send_after(self(), :next_frame, 250)
+    Process.send_after(self(), :next_frame, 100)
 
     {:noreply, Map.merge(state, %{graph: graph, status: status, frames: rest, games: games}),
      push: graph}
@@ -48,7 +48,7 @@ defmodule Ctf.UI.Scenes.Game do
       |> C.Board.modify(game.board)
       |> C.Scores.modify(game.board)
 
-    Process.send_after(self(), :next_frame, 250)
+    Process.send_after(self(), :next_frame, 100)
 
     {:noreply, %{state | graph: next_graph, frames: rest}, push: next_graph}
   end

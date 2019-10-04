@@ -91,7 +91,6 @@ defmodule Ctf.Game do
     {status, [game | frames]}
   end
 
-  # limit to 1000 loops
   defp perform_game_loop(_, _, frames, 1000), do: {:draw, frames}
 
   defp perform_game_loop(:ok, game, frames, count) do
