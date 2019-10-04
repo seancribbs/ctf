@@ -10,8 +10,7 @@ defmodule Ctf.Players.Random do
   end
 
   def name() do
-    # yes, collsions will happen.  deal with it.
-    "Random #{trunc(:rand.uniform() * 100_000)}"
+    "Random"
   end
 
   defp accumulate_turns(acc, 0) do

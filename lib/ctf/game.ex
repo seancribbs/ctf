@@ -20,14 +20,86 @@ defmodule Ctf.Game do
     }
   end
 
+  def start_battle(health_points: health_points) do
+    {:ok, modules} = :application.get_key(:ctf, :modules)
+
+    combos =
+      modules
+      |> Enum.filter(&(String.starts_with?(Atom.to_string(&1), "Elixir.Ctf.Players")))
+      |> combinations(2)
+
+    if length(combos) == 0 do
+      IO.puts "There are 1 or fewer contenders currently, so there's no battles to be done."
+      IO.puts "Try using #{__MODULE__}.start_game(...) instead"
+      System.halt(0)
+    end
+
+    played_games =
+      combos
+      |> Enum.map(fn contenders -> Task.async(
+           fn -> {contenders, do_game(contenders: contenders, health_points: health_points)} end
+         ) end)
+      |> Enum.map(&(Task.await(&1)))
+
+    win_counts =
+      Enum.reduce(played_games, %{}, fn {[contender1, contender2], {status, _}}, acc ->
+        case status do
+          {:win, %Player{name: name}} ->
+            Map.update(acc, name, 1, &(&1 + 1))
+          :draw ->
+            acc
+            |> Map.update(contender1, 1, &(&1 + 1))
+            |> Map.update(contender2, 1, &(&1 + 1))
+        end
+      end)
+
+    played_games
+    |> Enum.each(fn {contenders, {status, frames}} ->
+         names = Enum.map(contenders, &(&1.name()))
+         IO.puts(Enum.join(names, "  vs  "))
+
+         Ctf.UI.start({status, frames})
+
+         case status do
+           {:win, %Player{name: name}} ->
+             IO.puts("And the winner is... #{name}")
+           :draw ->
+             IO.puts("It's a draw!!!")
+         end
+       end)
+
+require IEx
+IEx.pry
+
+    IO.inspect(win_counts)
+      #|> Enum.map(&(store_game(&1)))
+      #|> Enum.map(&(&1["victors"]))
+      #|> List.flatten
+      #|> Enum.reduce(%{}, fn name, acc ->
+      #     Map.update(acc, name, 1, &(&1 + 1))
+      #   end)
+      #|> Enum.sort(&(elem(&1, 1) >= elem(&2, 1)))
+
+  #  Board.print_results(sorted_winners, length(combos))
+  end
+
+  def do_game(contenders: contenders, health_points: health_points) do
+    Ctf.Game.new(
+      for contender <- contenders do
+        %{health_points: health_points, module: contender}
+      end
+    )
+    |> play()
+  end
+
   # returns status (:draw, {:win, player})
   def play(%__MODULE__{} = game) do
     {status, frames} = perform_game_loop(:ok, game, [], 0)
-    frames
-    |> Enum.each(fn g ->
-         :timer.sleep(200)
-          Board.dump(g.board)
-       end)
+    #frames
+    #|> Enum.each(fn g ->
+    #     :timer.sleep(200)
+    #      Board.dump(g.board)
+    #   end)
     {status, [game | frames]}
   end
 
@@ -57,8 +129,6 @@ defmodule Ctf.Game do
             # by the time player 1 moves.  if player 2 moves into player 1, we
             # are okay with that, because we know that player 1 is also going
             # to move into player 2.
-
-            IO.inspect({p1_move, p2_move})
 
             p1_will_move_into_p2 =
               if !is_nil(p1_move) && elem(p1_move, 0) == :move do
@@ -522,5 +592,11 @@ defmodule Ctf.Game do
   end
   defp first([{action, count} | rest_steps], acc, remaining) do
     first([{action, count - 1}] ++ rest_steps, [{action, 1} | acc], remaining - 1)
+  end
+
+  defp combinations(_, 0), do: [[]]
+  defp combinations([], _), do: []
+  defp combinations([x|xs], n) when is_integer(n) do
+    (for y <- combinations(xs, n - 1), do: [x|y]) ++ combinations(xs, n)
   end
 end

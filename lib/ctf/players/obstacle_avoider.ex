@@ -7,7 +7,7 @@ defmodule Ctf.Players.ObstacleAvoider do
   @moves [:fire, :clockwise, :counterclockwise, :move]
 
   def name() do
-    "Obstacle Avoider Tank #{trunc(:rand.uniform() * 100)}"
+    "Obstacle Avoider"
   end
 
   @impl Ctf.Player
