@@ -7,7 +7,7 @@ defmodule Ctf.Players.Jeremy do
   @moves [:fire, :clockwise, :counterclockwise, :move]
 
   def name() do
-    "Jeremy (Obstacle Avoider) Tank #{trunc(:rand.uniform() * 100)}"
+    "Jeremy (Obstacle Avoider) Tank"
   end
 
   @impl Ctf.Player
@@ -93,8 +93,9 @@ defmodule Ctf.Players.Jeremy do
 
       # otherwise turn clockwise (until you can eventually move forward)
       true ->
-        new_player = Player.rotate(player, Enum.random([:clockwise, :counterclockwise]))
-        accumulate_turns([{:clockwise, 1} | acc], game, new_player, remaining - 1, :avoiding)
+        direction = Enum.random([:clockwise, :counterclockwise])
+        new_player = Player.rotate(player, direction)
+        accumulate_turns([{direction, 1} | acc], game, new_player, remaining - 1, :avoiding)
     end
   end
 
