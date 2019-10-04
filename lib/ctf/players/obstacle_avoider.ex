@@ -12,7 +12,7 @@ defmodule Ctf.Players.ObstacleAvoider do
 
   @impl Ctf.Player
   def turn(game = %Game{}, player = %Player{}, _state) do
-    {accumulate_turns([], game, player, 3), Enum.random(1..10000)}
+    {accumulate_turns([], game, player, 3), nil}
   end
 
   defp accumulate_turns(acc, _game, _player, 0) do

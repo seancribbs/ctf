@@ -54,33 +54,18 @@ defmodule Ctf.Game do
       end)
 
     played_games
-    |> Enum.each(fn {contenders, {status, frames}} ->
-         names = Enum.map(contenders, &(&1.name()))
-         IO.puts(Enum.join(names, "  vs  "))
-
-         Ctf.UI.start({status, frames})
-
-         case status do
-           {:win, %Player{name: name}} ->
-             IO.puts("And the winner is... #{name}")
-           :draw ->
-             IO.puts("It's a draw!!!")
-         end
-       end)
-
-require IEx
-IEx.pry
+    |> Enum.map(&(elem(&1, 1)))
+    |> Ctf.UI.start()
 
     IO.inspect(win_counts)
-      #|> Enum.map(&(store_game(&1)))
-      #|> Enum.map(&(&1["victors"]))
-      #|> List.flatten
-      #|> Enum.reduce(%{}, fn name, acc ->
-      #     Map.update(acc, name, 1, &(&1 + 1))
-      #   end)
-      #|> Enum.sort(&(elem(&1, 1) >= elem(&2, 1)))
 
-  #  Board.print_results(sorted_winners, length(combos))
+    {winner, number_won} =
+      win_counts
+      |> Enum.sort_by(fn {_, v} -> v end)
+      |> Enum.reverse()
+      |> List.first()
+
+    IO.puts("\nAnd the overall winner is #{winner} with #{number_won} games")
   end
 
   def do_game(contenders: contenders, health_points: health_points) do
@@ -103,8 +88,8 @@ IEx.pry
     {status, [game | frames]}
   end
 
-  # limit to 100000 loops
-  defp perform_game_loop(_, _, frames, 100000), do: {:draw, frames}
+  # limit to 1000 loops
+  defp perform_game_loop(_, _, frames, 1000), do: {:draw, frames}
   defp perform_game_loop(:ok, game, frames, count) do
     {move_lists, players} =
       Enum.reduce(game.board.players, {[], []}, fn player, {move_lists, acc} ->

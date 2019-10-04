@@ -6,7 +6,7 @@ defmodule Ctf.Players.Random do
 
   @impl Ctf.Player
   def turn(_game = %Game{}, _player = %Player{}, _state) do
-    {accumulate_turns([], 3), Enum.random(1..10000)}
+    {accumulate_turns([], 3), nil}
   end
 
   def name() do
