@@ -25,15 +25,19 @@ defmodule Ctf.Players.ObstacleAvoider do
     new_cell_y = displace_y + y
 
     contents = Board.get_cell_contents(game.board, new_cell_x, new_cell_y)
+
     cond do
       # go forward if you can
-      contents == [] and new_cell_x < game.board.width and new_cell_y < game.board.height and new_cell_x >= 0 and new_cell_y >= 0 ->
+      contents == [] and new_cell_x < game.board.width and new_cell_y < game.board.height and
+        new_cell_x >= 0 and new_cell_y >= 0 ->
         new_player = Player.move(player)
         accumulate_turns([{:move, 1} | acc], game, new_player, remaining - 1)
+
       # who knows, we might win here
       match?([%Flag{}], contents) ->
         new_player = Player.move(player)
         accumulate_turns([{:move, 1} | acc], game, new_player, remaining - 1)
+
       # otherwise turn clockwise (until you can eventually move forward)
       true ->
         new_player = Player.rotate(player, :clockwise)

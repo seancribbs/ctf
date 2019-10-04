@@ -22,7 +22,7 @@ defmodule Ctf.UI.Scenes.Game do
     {:ok, %{graph: @graph, viewport: viewport, games: games}}
   end
 
-  def handle_info(:replay, %{graph: graph, games: [game|games]} = state) do
+  def handle_info(:replay, %{graph: graph, games: [game | games]} = state) do
     {status, [game | rest]} = game
 
     graph =

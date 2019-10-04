@@ -5,41 +5,45 @@ defmodule Ctf.Board do
   alias Ctf.{Player, Obstacle, Flag}
 
   @type t() :: %__MODULE__{
-          players: [Player.t],
-          flags: [Flag.t],
-          obstacles: List.t,
-          width: Integer.t,
-          height: Integer.t,
+          players: [Player.t()],
+          flags: [Flag.t()],
+          obstacles: List.t(),
+          width: Integer.t(),
+          height: Integer.t(),
           events: [Tuple.t()]
-  }
+        }
 
   @direction_notation [n: "\u02C4", s: "\u02C5", e: "\u02C3", w: "\u02C2"]
 
-  def new(height: height,
-          width: width,
-          players: [%{}, %{}] = players_spec,
-          obstacle_count: obstacle_count) do
+  def new(
+        height: height,
+        width: width,
+        players: [%{}, %{}] = players_spec,
+        obstacle_count: obstacle_count
+      ) do
+    {cells_with_flags, flags} =
+      place_flags(
+        %{},
+        width,
+        height
+      )
 
-    {cells_with_flags, flags} = place_flags(
-      %{},
-      width,
-      height
-    )
+    {cells_with_players, players} =
+      place_players(
+        cells_with_flags,
+        width,
+        height,
+        players_spec,
+        flags
+      )
 
-    {cells_with_players, players} = place_players(
-      cells_with_flags,
-      width,
-      height,
-      players_spec,
-      flags
-    )
-
-    {_cells_with_obstacles, obstacles} = place_obstacles(
-      cells_with_players,
-      width,
-      height,
-      obstacle_count
-    )
+    {_cells_with_obstacles, obstacles} =
+      place_obstacles(
+        cells_with_players,
+        width,
+        height,
+        obstacle_count
+      )
 
     %__MODULE__{
       players: players,
@@ -74,10 +78,13 @@ defmodule Ctf.Board do
           case get_cell_contents(board, x, y) do
             [] ->
               [IO.ANSI.blue(), "__"]
+
             [%Obstacle{} | _] ->
               [IO.ANSI.red(), "XX"]
+
             [%Player{number: number, direction: direction} | _] ->
               [IO.ANSI.yellow(), "#{number}#{@direction_notation[direction]}"]
+
             [%Flag{number: number} | _] ->
               [IO.ANSI.green(), "F#{number}"]
           end ++ [IO.ANSI.reset(), " "]
