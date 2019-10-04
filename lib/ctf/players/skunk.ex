@@ -5,7 +5,7 @@ defmodule Ctf.Players.Skunk do
   # moves [:fire, :clockwise, :counterclockwise, :move]
 
   def name do
-    "Skunk #{trunc(:rand.uniform() * 100)}"
+    "Skunk"
   end
 
   @impl Ctf.Player

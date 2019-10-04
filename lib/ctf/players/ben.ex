@@ -86,7 +86,7 @@ defmodule Ctf.Players.Ben do
   end
 
   def name() do
-    "Ben #{:rand.uniform(100_000)}"
+    "Ben"
   end
 
   defp d2d(d, d2) do

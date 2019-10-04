@@ -7,7 +7,7 @@ defmodule Ctf.Players.Jeremy do
   @moves [:fire, :clockwise, :counterclockwise, :move]
 
   def name() do
-    "Jeremy (Obstacle Avoider) Tank #{trunc(:rand.uniform() * 100)}"
+    "Jeremy (Obstacle Avoider) Tank"
   end
 
   @impl Ctf.Player
