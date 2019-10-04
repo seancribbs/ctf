@@ -18,13 +18,25 @@ defmodule Ctf.Players.Ben do
     }
 
     cond do
+      {:vert, :n, false, true} == {state, d, up, left} ->
+        {[counterclockwise: 1, move: 1, clockwise: 1], state}
+
       {:vert, :n, false} == {state, d, up} ->
+        {[counterclockwise: 1, move: 1, clockwise: 1], state}
+
+      {:vert, :s, false, true} == {state, d, down, right} ->
         {[counterclockwise: 1, move: 1, clockwise: 1], state}
 
       {:vert, :s, false} == {state, d, down} ->
         {[counterclockwise: 1, move: 1, clockwise: 1], state}
 
+      {:horiz, :e, false, true} == {state, d, right, up} ->
+        {[counterclockwise: 1, move: 1, clockwise: 1], state}
+
       {:horiz, :e, false} == {state, d, right} ->
+        {[counterclockwise: 1, move: 1, clockwise: 1], state}
+
+      {:horiz, :w, false, true} == {state, d, left, down} ->
         {[counterclockwise: 1, move: 1, clockwise: 1], state}
 
       {:horiz, :w, false} == {state, d, left} ->
