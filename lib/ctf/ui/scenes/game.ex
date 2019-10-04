@@ -37,6 +37,8 @@ defmodule Ctf.UI.Scenes.Game do
   end
 
   def handle_info(:next_frame, %{frames: [], games: []} = state) do
+    print_outcome(state)
+
     {:noreply, state}
   end
 
@@ -51,7 +53,14 @@ defmodule Ctf.UI.Scenes.Game do
     {:noreply, %{state | graph: next_graph, frames: rest}, push: next_graph}
   end
 
-  def handle_info(:next_frame, %{status: status, frames: [], games: [game | rest]} = state) do
+  def handle_info(:next_frame, %{frames: [], games: [game | rest]} = state) do
+    print_outcome(state)
+
+    {status, frames} = game
+    handle_info(:next_frame, Map.merge(state, %{status: status, frames: frames, games: rest}))
+  end
+
+  defp print_outcome(%{status: status}) do
     case status do
       {:win, %Ctf.Player{name: name}} ->
         IO.puts("And the winner is... #{name}")
@@ -59,8 +68,9 @@ defmodule Ctf.UI.Scenes.Game do
       :draw ->
         IO.puts("It's a draw!")
     end
+  end
 
-    {status, frames} = game
-    handle_info(:next_frame, Map.merge(state, %{status: status, frames: frames, games: rest}))
+  defp print_outcome(_) do
+    :ok
   end
 end
